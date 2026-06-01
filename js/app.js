@@ -3,6 +3,7 @@
     const trialStartKey = 'exam_manager_trial_start';
     const trialEndKey = 'exam_manager_trial_end';
     let trialTimer = null;
+    let sessionUserId = null;
     const defaultSettings = {
       totalExams: 10,
       selectedExamNo: 1,
@@ -105,7 +106,10 @@
     }
 
     function saveState() {
+      const currentUserId = state.settings.currentUserId;
+      state.settings.currentUserId = null;
       dataStore.save(state);
+      state.settings.currentUserId = currentUserId;
     }
 
     function normalizeAccounts(accounts = []) {
@@ -124,7 +128,7 @@
     }
 
     function currentUser() {
-      return state.accounts.find((account) => account.id === state.settings.currentUserId) || null;
+      return state.accounts.find((account) => account.id === sessionUserId) || null;
     }
 
     function isAdmin() {
@@ -206,7 +210,7 @@
     function normalizeSettings(settings = {}) {
       const totalExams = Math.max(1, Number(settings.totalExams || defaultSettings.totalExams));
       const selectedExamNo = Math.min(totalExams, Math.max(1, Number(settings.selectedExamNo || defaultSettings.selectedExamNo)));
-      return { totalExams, selectedExamNo, currentUserId: settings.currentUserId || null };
+      return { totalExams, selectedExamNo, currentUserId: null };
     }
 
     function normalizeQuestions(questions) {
@@ -799,7 +803,7 @@
     window.deleteAccount = (id) => {
       if (!requireAdmin()) return;
       if (state.accounts.length <= 1) return alert('Phải giữ lại ít nhất một tài khoản.');
-      if (id === state.settings.currentUserId) return alert('Không thể xóa tài khoản đang đăng nhập.');
+      if (id === sessionUserId) return alert('Không thể xóa tài khoản đang đăng nhập.');
       if (!confirm('Xóa tài khoản này?')) return;
       state.accounts = state.accounts.filter((account) => account.id !== id);
       renderAll();
@@ -851,8 +855,7 @@
         return;
       }
       $('loginError').textContent = '';
-      state.settings.currentUserId = account.id;
-      saveState();
+      sessionUserId = account.id;
       renderAll();
       switchView('dashboard');
     });
@@ -866,8 +869,7 @@
     });
 
     $('logoutBtn').addEventListener('click', () => {
-      state.settings.currentUserId = null;
-      saveState();
+      sessionUserId = null;
       renderAuthState();
     });
 
