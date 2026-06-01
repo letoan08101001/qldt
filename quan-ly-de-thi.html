@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý đề thi</title>
+  <style>
+    :root {
+      --bg: #eef3f1;
+      --surface: #ffffff;
+      --ink: #1c2321;
+      --muted: #63706b;
+      --line: #d9ded7;
+      --accent: #126b5b;
+      --accent-dark: #0d4f43;
+      --accent-2: #bb5a2a;
+      --soft: #e8f1ee;
+      --danger: #a83636;
+      --shadow: 0 18px 45px rgba(28, 35, 33, .10);
+      --radius: 8px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(18, 107, 91, .13), transparent 34%),
+        linear-gradient(135deg, #f5f8f6 0%, var(--bg) 100%);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 7px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease;
+      box-shadow: 0 8px 18px rgba(18, 107, 91, .16);
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    button.secondary {
+      background: #eef2ef;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    button.warning { background: var(--accent-2); }
+    button.danger { background: var(--danger); }
+    button.icon { padding: 7px 10px; min-width: 38px; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px 11px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(18, 107, 91, .55);
+      box-shadow: 0 0 0 3px rgba(18, 107, 91, .12);
+    }
+
+    textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #15231f 0%, #0f1b18 100%);
+      color: #eef7f4;
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 8px 0 24px rgba(16, 28, 24, .18);
+    }
+
+    .brand {
+      padding: 0 6px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.13);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .brand p { margin: 8px 0 0; color: #b9cbc5; line-height: 1.45; font-size: 13px; }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      color: #d9e8e4;
+      border: 1px solid transparent;
+      justify-content: flex-start;
+      padding: 11px 10px;
+    }
+
+    .nav button.active {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.14);
+      color: #fff;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .topbar p { margin: 6px 0 0; color: var(--muted); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(260px, .8fr) minmax(360px, 1.2fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    .list {
+      display: grid;
+      gap: 9px;
+      max-height: 570px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .row-item {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 11px;
+      display: grid;
+      gap: 8px;
+      background: #fff;
+    }
+
+    .row-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+    }
+
+    .row-title strong {
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--soft);
+      color: #24574f;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-weight: 700;
+    }
+
+    .empty {
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 7px;
+      padding: 18px;
+      text-align: center;
+      background: #fbfcfa;
+    }
+
+    .spec-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) 110px 46px;
+      gap: 9px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+
+    .generator-settings {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .preview-wrap {
+      background: #ecefeb;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .exam-paper {
+      background: #fff;
+      width: min(100%, 21cm);
+      min-height: 29.7cm;
+      margin: 0 auto;
+      padding: .5cm 1.35cm 1.15cm;
+      color: #111;
+      box-shadow: 0 8px 25px rgba(0,0,0,.12);
+      line-height: 1.35;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14pt;
+    }
+
+    .exam-page-break {
+      break-after: page;
+      page-break-after: always;
+    }
+
+    .exam-half {
+      height: 14.025cm;
+      overflow: hidden;
+      padding: .25cm 0;
+    }
+
+    .exam-half.empty-half { border-top: 1px dashed #cfd6d2; opacity: .35; }
+
+    .exam-page-break:last-child {
+      break-after: auto;
+      page-break-after: auto;
+    }
+
+    .exam-head {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .65cm;
+      text-align: center;
+      margin-bottom: 1.05cm;
+      font-weight: 700;
+      align-items: start;
+      font-size: 14pt;
+      line-height: 1.25;
+    }
+
+    .exam-head.three-col {
+      grid-template-columns: minmax(0, 1fr) .35fr minmax(0, 1.22fr);
+      gap: .18cm;
+    }
+
+    .exam-head > div {
+      white-space: nowrap;
+      text-align: center;
+      justify-self: center;
+    }
+
+    .exam-head .center-col {
+      min-height: 2.2cm;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+    }
+
+    .exam-title {
+      text-align: center;
+      margin: 0 0 .45cm;
+      font-size: 14pt;
+    }
+
+    .exam-title h1 {
+      font-size: 14pt;
+      margin: 0 0 .18cm;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .exam-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+      margin: 18px 0;
+    }
+
+    .question {
+      margin: .22cm 0;
+      break-inside: avoid;
+      font-size: 14pt;
+    }
+
+    .question strong { display: inline; }
+    .answer-space { height: 70px; border-bottom: 1px dotted #888; margin-top: 8px; }
+
+    .hidden { display: none !important; }
+
+    .import-export {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .style-grid {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.2fr) minmax(160px, 1fr) 100px 130px 130px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .check-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 39px;
+    }
+
+    .check-label input {
+      width: auto;
+    }
+
+    .login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      width: min(100%, 420px);
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid rgba(217, 222, 215, .9);
+      border-radius: 14px;
+      box-shadow: 0 28px 80px rgba(18, 35, 31, .18);
+      padding: 26px;
+      backdrop-filter: blur(12px);
+    }
+
+    .login-card h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .login-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.45; }
+    .login-form { display: grid; gap: 12px; }
+    .login-error { color: var(--danger); min-height: 20px; font-size: 13px; font-weight: 700; }
+
+    .user-box {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,.13);
+      padding: 14px 6px 0;
+      display: grid;
+      gap: 8px;
+      color: #d9e8e4;
+      font-size: 13px;
+    }
+
+    .user-box strong { color: #fff; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card span { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .stat-card strong { display: block; margin-top: 8px; font-size: 30px; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .file-input { max-width: 280px; }
+
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-2, .form-grid { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+      .exam-paper { padding: 18px 18px 28px; min-height: auto; }
+      .exam-head, .exam-info { grid-template-columns: 1fr; }
+      .exam-head { margin-bottom: 26px; }
+      .spec-row, .generator-settings, .style-grid, .stats-grid, .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      @page { size: 21cm 29.7cm; margin: .5cm 1.35cm 1.15cm 1.35cm; }
+      body { background: #fff; }
+      .sidebar, .topbar, .panel:not(.print-panel) { display: none !important; }
+      .app-shell, .content { display: block; padding: 0; }
+      .print-panel { border: 0; box-shadow: none; padding: 0; }
+      .preview-wrap { border: 0; background: #fff; padding: 0; overflow: visible; }
+      .exam-paper { width: 18.3cm; height: 28.05cm; min-height: 28.05cm; box-shadow: none; padding: 0; margin: 0 auto; overflow: hidden; }
+      .exam-half { height: 14.025cm; padding: .25cm 0; overflow: hidden; }
+      .empty-half { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h1>Quản lý đề thi</h1>
+      <p>Đăng nhập để quản lý ngân hàng câu hỏi, form đề thi và tài khoản người dùng.</p>
+      <form id="loginForm" class="login-form">
+        <label>
+          Tên đăng nhập
+          <input id="loginUsername" autocomplete="username" value="admin">
+        </label>
+        <label>
+          Mật khẩu
+          <input id="loginPassword" type="password" autocomplete="current-password" value="admin123">
+        </label>
+        <button type="submit">Đăng nhập</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+  </section>
+
+  <div class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Quản lý đề thi</h1>
+        <p>Ngân hàng câu hỏi, trộn đề theo mục, xuất Word và in trực tiếp.</p>
+      </div>
+      <nav class="nav" aria-label="Điều hướng">
+        <button class="active" data-view="dashboard">▦ Dashboard</button>
+        <button data-view="questions">☰ Câu hỏi</button>
+        <button data-view="generator">⚙ Tạo đề</button>
+        <button data-view="template">✎ Form đề thi</button>
+        <button data-view="accounts" data-admin-only>♙ Tài khoản</button>
+        <button data-view="data">⇅ Dữ liệu</button>
+      </nav>
+      <div class="user-box">
+        <div>Đang đăng nhập: <strong id="currentUserName"></strong></div>
+        <div id="currentUserRole"></div>
+        <button class="secondary" id="logoutBtn">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="view-dashboard">
+        <div class="topbar">
+          <div>
+            <h2>Dashboard</h2>
+            <p>Tổng quan ngân hàng câu hỏi, đề thi và hoạt động gần đây.</p>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><span>Mục câu hỏi</span><strong id="statCategories">0</strong></div>
+          <div class="stat-card"><span>Câu hỏi</span><strong id="statQuestions">0</strong></div>
+          <div class="stat-card"><span>Số đề</span><strong id="statExams">0</strong></div>
+          <div class="stat-card"><span>Tài khoản</span><strong id="statAccounts">0</strong></div>
+        </div>
+        <div class="dashboard-grid">
+          <section class="panel">
+            <h3>Thông tin tài khoản</h3>
+            <div id="profileSummary" class="list"></div>
+          </section>
+          <section class="panel">
+            <h3>Thống kê theo mục</h3>
+            <div id="categorySummary" class="list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-questions" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Ngân hàng câu hỏi</h2>
+            <p>Thêm câu hỏi vào từng mục để khi tạo đề hệ thống chỉ lấy đúng nhóm đã chọn.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="clearQuestionForm">Làm mới form</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <section class="panel">
+            <h3 id="questionFormTitle">Thêm câu hỏi</h3>
+            <form id="questionForm" class="form-grid">
+              <input type="hidden" id="questionId">
+              <label>
+                Mục câu hỏi
+                <select id="questionCategory" required></select>
+              </label>
+              <label>
+                Điểm
+                <input id="questionPoints" type="number" min="0" step="0.25" value="1">
+              </label>
+              <label class="full">
+                Nội dung câu hỏi
+                <textarea id="questionText" required placeholder="Nhập nội dung câu hỏi..."></textarea>
+              </label>
+              <label class="full">
+                Gợi ý/đáp án nội bộ
+                <textarea id="questionAnswer" placeholder="Không bắt buộc, chỉ để quản lý trong ngân hàng."></textarea>
+              </label>
+              <div class="actions full">
+                <button type="submit">Lưu câu hỏi</button>
+                <button type="button" class="secondary" id="cancelEditQuestion">Hủy sửa</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Danh sách câu hỏi</h3>
+            <div class="form-grid">
+              <label>
+                Lọc theo mục
+                <select id="filterCategory"></select>
+              </label>
+              <label>
+                Tìm nội dung
+                <input id="searchQuestion" placeholder="Nhập từ khóa...">
+              </label>
+            </div>
+            <div id="questionList" class="list" style="margin-top:12px"></div>
+          </section>
+        </div>
+
+        <section class="panel" style="margin-top:16px">
+          <h3>Quản lý mục câu hỏi</h3>
+          <form id="categoryForm" class="form-grid">
+            <label>
+              Tên mục mới
+              <input id="categoryName" placeholder="Ví dụ: Lý thuyết, Bài tập, Vận dụng...">
+            </label>
+            <div class="actions" style="align-self:end">
+              <button type="submit">Thêm mục</button>
+            </div>
+          </form>
+          <div id="categoryList" class="list" style="margin-top:12px; max-height:260px"></div>
+        </section>
+      </section>
+
+      <section id="view-generator" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Tạo đề ngẫu nhiên</h2>
+            <p>Chọn số câu cho từng mục. Mỗi lần bấm tạo đề sẽ trộn câu hỏi mới trong đúng mục đó.</p>
+          </div>
+          <div class="actions">
+            <button id="generateExam">Tạo đề</button>
+            <button class="warning" id="exportWord">Xuất Word</button>
+            <button class="secondary" id="printExam">In trực tiếp</button>
+            <button class="warning" id="exportAllWord">Xuất tất cả đề</button>
+            <button class="secondary" id="printAllExam">In tất cả đề</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <section class="panel">
+            <h3>Cấu hình lấy câu hỏi</h3>
+            <div class="generator-settings">
+              <label>
+                Số lượng đề mặc định
+                <input id="totalExamCount" type="number" min="1" value="10">
+              </label>
+              <label>
+                Đang tạo đề số
+                <select id="selectedExamNo"></select>
+              </label>
+            </div>
+            <div id="specList"></div>
+            <button class="secondary" id="addSpec">Thêm mục vào đề</button>
+            <div class="empty" id="generatorHint" style="margin-top:12px"></div>
+          </section>
+
+          <section class="panel print-panel">
+            <h3>Bản xem trước</h3>
+            <div class="preview-wrap">
+              <article id="examPreview" class="exam-paper"></article>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-template" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Chỉnh form đề thi</h2>
+            <p>Các thông tin này sẽ hiện trong bản in và file Word.</p>
+          </div>
+          <div class="actions">
+            <button id="saveTemplate">Lưu form</button>
+            <button class="secondary" id="resetTemplate">Về form mẫu</button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <form id="templateForm" class="form-grid">
+            <label>
+              Đơn vị bên trái
+              <textarea id="tplLeftHeader"></textarea>
+            </label>
+            <label>
+              Hội đồng ở giữa
+              <textarea id="tplCenterHeader"></textarea>
+            </label>
+            <label class="full">
+              Thông tin bên phải
+              <textarea id="tplRightHeader"></textarea>
+            </label>
+            <label>
+              Tiêu đề đề thi
+              <input id="tplTitle">
+            </label>
+            <label>
+              Môn/chủ đề
+              <input id="tplSubject">
+            </label>
+            <label>
+              Thời gian làm bài
+              <input id="tplDuration">
+            </label>
+            <label>
+              Mã đề
+              <input id="tplCode">
+            </label>
+            <label class="full">
+              Dòng thông tin thí sinh
+              <input id="tplStudentLine">
+            </label>
+            <label class="full">
+              Hướng dẫn đầu đề
+              <textarea id="tplInstruction"></textarea>
+            </label>
+            <label>
+              Cách đánh số câu
+              <select id="tplNumberStyle">
+                <option value="Câu">Câu 1.</option>
+                <option value="Question">Question 1.</option>
+                <option value="">1.</option>
+              </select>
+            </label>
+            <label>
+              Khoảng trống trả lời
+              <select id="tplAnswerSpace">
+                <option value="none">Không thêm</option>
+                <option value="short">Ngắn</option>
+                <option value="long">Dài</option>
+              </select>
+            </label>
+          </form>
+        </section>
+
+        <section class="panel" style="margin-top:16px">
+          <h3>Định dạng chữ</h3>
+          <div class="style-grid">
+            <label>
+              Khu vực cần chỉnh
+              <select id="styleTarget">
+                <option value="headerLeft">Đầu đề bên trái</option>
+                <option value="headerCenter">Đầu đề ở giữa</option>
+                <option value="headerRight">Đầu đề bên phải</option>
+                <option value="title">Tiêu đề đề thi</option>
+                <option value="subject">Môn thi</option>
+                <option value="duration">Thời gian thi</option>
+                <option value="instruction">Hình thức thi</option>
+                <option value="question">Câu hỏi</option>
+              </select>
+            </label>
+            <label>
+              Font chữ
+              <select id="styleFont">
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Tahoma">Tahoma</option>
+              </select>
+            </label>
+            <label>
+              Cỡ chữ
+              <input id="styleSize" type="number" min="8" max="28" step="1">
+            </label>
+            <label>
+              Căn lề
+              <select id="styleAlign">
+                <option value="left">Trái</option>
+                <option value="center">Giữa</option>
+                <option value="right">Phải</option>
+                <option value="justify">Đều hai bên</option>
+              </select>
+            </label>
+            <label class="check-label">
+              <input id="styleBold" type="checkbox">
+              In đậm
+            </label>
+          </div>
+        </section>
+
+        <section class="panel print-panel" style="margin-top:16px">
+          <h3>Bản xem trước</h3>
+          <div class="preview-wrap">
+            <article id="templatePreview" class="exam-paper"></article>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-data" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Dữ liệu</h2>
+            <p>Sao lưu để mang sang máy khác hoặc khôi phục khi cần.</p>
+          </div>
+        </div>
+        <section class="panel">
+          <h3>Sao lưu và khôi phục</h3>
+          <div class="import-export">
+            <button id="backupData">Tải file sao lưu</button>
+            <input class="file-input" id="restoreData" type="file" accept="application/json">
+            <button class="danger" id="resetAll">Xóa tất cả dữ liệu</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-accounts" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Quản lý tài khoản</h2>
+            <p>Tạo tài khoản, phân quyền và lưu thông tin cán bộ sử dụng phần mềm.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="clearAccountForm">Làm mới form</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <section class="panel">
+            <h3 id="accountFormTitle">Thêm tài khoản</h3>
+            <form id="accountForm" class="form-grid">
+              <input type="hidden" id="accountId">
+              <label>
+                Tên đăng nhập
+                <input id="accountUsername" required>
+              </label>
+              <label>
+                Mật khẩu
+                <input id="accountPassword" type="password" required>
+              </label>
+              <label>
+                Quyền
+                <select id="accountRole">
+                  <option value="admin">Quản trị</option>
+                  <option value="user">Người dùng</option>
+                </select>
+              </label>
+              <label>
+                Họ và tên
+                <input id="accountFullName" required>
+              </label>
+              <label>
+                Ngày sinh
+                <input id="accountBirthDate" type="date">
+              </label>
+              <label>
+                Cấp bậc
+                <input id="accountRank">
+              </label>
+              <label>
+                Chức vụ
+                <input id="accountPosition">
+              </label>
+              <label>
+                Đơn vị
+                <input id="accountUnit">
+              </label>
+              <div class="actions full">
+                <button type="submit">Lưu tài khoản</button>
+                <button type="button" class="secondary" id="cancelEditAccount">Hủy sửa</button>
+              </div>
+            </form>
+          </section>
+          <section class="panel">
+            <h3>Danh sách tài khoản</h3>
+            <div id="accountList" class="list"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORE_KEY = 'exam_manager_v1';
+    const defaultSettings = {
+      totalExams: 10,
+      selectedExamNo: 1,
+      currentUserId: null
+    };
+
+    const defaultAccounts = [
+      {
+        id: 'admin',
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin',
+        fullName: 'Quản trị hệ thống',
+        birthDate: '',
+        rank: '',
+        position: 'Quản trị viên',
+        unit: 'Ban quản trị'
+      }
+    ];
+
+    const defaultTextStyles = {
+      headerLeft: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      headerCenter: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      headerRight: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      title: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      subject: { font: 'Times New Roman', size: 14, bold: false, align: 'center' },
+      duration: { font: 'Times New Roman', size: 14, bold: false, align: 'center' },
+      instruction: { font: 'Times New Roman', size: 14, bold: false, align: 'center' },
+      question: { font: 'Times New Roman', size: 14, bold: false, align: 'left' }
+    };
+
+    const defaultTemplate = {
+      leftHeader: 'TRƯỜNG TCKT CÔNG BINH\nHỘI ĐỒNG THI CẤP CHỨNG CHỈ\nRÀ PHÁ BOM MÌN, VẬT NỔ\n---------\nNăm 2026',
+      centerHeader: '',
+      rightHeader: 'ĐỀ THI CẤP CHỨNG CHỈ RPBN, VN\nMÔN THI: THỰC HÀNH TỔNG HỢP\nĐỐI TƯỢNG: KỸ THUẬT VIÊN RPBM, VN',
+      title: 'ĐỀ THI SỐ',
+      subject: 'MÔN THI: THỰC HÀNH TỔNG HỢP',
+      duration: 'Thời gian thi: 40 phút',
+      code: '',
+      studentLine: '',
+      instruction: 'Hình thức thi: Vấn đáp + thực hành',
+      numberStyle: 'Câu',
+      answerSpace: 'none',
+      textStyles: structuredClone(defaultTextStyles),
+      templateVersion: 4
+    };
+
+    const sampleData = {
+      categories: [
+        { id: crypto.randomUUID(), name: 'Lý thuyết' },
+        { id: crypto.randomUUID(), name: 'Bài tập' },
+        { id: crypto.randomUUID(), name: 'Vận dụng' }
+      ],
+      questions: [],
+      specs: [],
+      template: { ...defaultTemplate },
+      settings: { ...defaultSettings },
+      accounts: structuredClone(defaultAccounts),
+      currentExam: []
+    };
+    sampleData.questions = [
+      { id: crypto.randomUUID(), categoryId: sampleData.categories[0].id, text: 'Trình bày khái niệm và vai trò của nội dung đã học.', answer: '', points: 1 },
+      { id: crypto.randomUUID(), categoryId: sampleData.categories[0].id, text: 'Nêu các đặc điểm chính của chủ đề trong bài học.', answer: '', points: 1 },
+      { id: crypto.randomUUID(), categoryId: sampleData.categories[1].id, text: 'Giải bài tập theo dữ liệu giáo viên cung cấp và trình bày các bước thực hiện.', answer: '', points: 2 },
+      { id: crypto.randomUUID(), categoryId: sampleData.categories[1].id, text: 'Phân tích tình huống và đưa ra kết quả tính toán phù hợp.', answer: '', points: 2 },
+      { id: crypto.randomUUID(), categoryId: sampleData.categories[2].id, text: 'Vận dụng kiến thức để xử lý một trường hợp thực tế.', answer: '', points: 3 }
+    ];
+    sampleData.specs = [
+      { categoryId: sampleData.categories[0].id, count: 1 },
+      { categoryId: sampleData.categories[1].id, count: 1 }
+    ];
+
+    let state = loadState();
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+    const lineBreaks = (value) => escapeHtml(value).replace(/\n/g, '<br>');
+
+    function loadState() {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return structuredClone(sampleData);
+      try {
+        const parsed = JSON.parse(raw);
+        const template = normalizeTemplate(parsed.template);
+        const settings = normalizeSettings(parsed.settings);
+        return {
+          categories: parsed.categories?.length ? parsed.categories : structuredClone(sampleData.categories),
+          questions: normalizeQuestions(parsed.questions || []),
+          specs: parsed.specs || [],
+          template,
+          settings,
+          accounts: normalizeAccounts(parsed.accounts),
+          currentExam: parsed.currentExam || []
+        };
+      } catch {
+        return structuredClone(sampleData);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }
+
+    function normalizeAccounts(accounts = []) {
+      const list = accounts.length ? accounts : structuredClone(defaultAccounts);
+      return list.map((account) => ({
+        id: account.id || crypto.randomUUID(),
+        username: account.username || '',
+        password: account.password || '',
+        role: account.role === 'admin' ? 'admin' : 'user',
+        fullName: account.fullName || account.username || '',
+        birthDate: account.birthDate || '',
+        rank: account.rank || '',
+        position: account.position || '',
+        unit: account.unit || ''
+      }));
+    }
+
+    function currentUser() {
+      return state.accounts.find((account) => account.id === state.settings.currentUserId) || null;
+    }
+
+    function isAdmin() {
+      return currentUser()?.role === 'admin';
+    }
+
+    function requireAdmin() {
+      if (isAdmin()) return true;
+      alert('Bạn cần quyền quản trị để thực hiện thao tác này.');
+      return false;
+    }
+
+    function normalizeTemplate(template = {}) {
+      const canKeepText = Number(template.templateVersion || 0) >= 3;
+      if (!canKeepText) return structuredClone(defaultTemplate);
+      const oldMeta = template.textStyles?.meta || {};
+      return {
+        ...defaultTemplate,
+        ...template,
+        textStyles: {
+          ...structuredClone(defaultTextStyles),
+          subject: { ...defaultTextStyles.subject, ...oldMeta, ...(template.textStyles?.subject || {}) },
+          duration: { ...defaultTextStyles.duration, ...oldMeta, ...(template.textStyles?.duration || {}) },
+          instruction: { ...defaultTextStyles.instruction, ...oldMeta, ...(template.textStyles?.instruction || {}) },
+          ...(template.textStyles || {})
+        },
+        templateVersion: 4
+      };
+    }
+
+    function normalizeSettings(settings = {}) {
+      const totalExams = Math.max(1, Number(settings.totalExams || defaultSettings.totalExams));
+      const selectedExamNo = Math.min(totalExams, Math.max(1, Number(settings.selectedExamNo || defaultSettings.selectedExamNo)));
+      return { totalExams, selectedExamNo, currentUserId: settings.currentUserId || null };
+    }
+
+    function normalizeQuestions(questions) {
+      return questions.map((question) => ({
+        ...question,
+        examNo: undefined
+      }));
+    }
+
+    function examNumberOptions(selected) {
+      const total = Math.max(1, Number(state.settings?.totalExams || defaultSettings.totalExams));
+      return Array.from({ length: total }, (_, index) => {
+        const number = index + 1;
+        return `<option value="${number}" ${Number(selected) === number ? 'selected' : ''}>Đề số ${formatExamNo(number)}</option>`;
+      }).join('');
+    }
+
+    function formatExamNo(examNo) {
+      const number = Number(examNo);
+      const safeNumber = Number.isFinite(number) && number > 0 ? number : 1;
+      return String(Math.trunc(safeNumber)).padStart(2, '0');
+    }
+
+    function examTitle(title, examNo) {
+      const base = String(title || 'DE THI SO').replace(/\s*\d+\s*$/, '').replace(/\s*[:：]\s*$/, '');
+      return `${base}: ${formatExamNo(examNo)}`;
+    }
+
+    function getTextStyle(key) {
+      state.template.textStyles = {
+        ...structuredClone(defaultTextStyles),
+        ...(state.template.textStyles || {})
+      };
+      return state.template.textStyles[key] || defaultTextStyles[key];
+    }
+
+    function styleAttr(key) {
+      const style = getTextStyle(key);
+      return [
+        `font-family: '${style.font}', serif`,
+        `font-size: ${Number(style.size || 14)}pt`,
+        `font-weight: ${style.bold ? '700' : '400'}`,
+        `text-align: ${style.align || 'left'}`
+      ].join('; ');
+    }
+
+    function categoryName(id) {
+      return state.categories.find((cat) => cat.id === id)?.name || 'Chưa có mục';
+    }
+
+    function renderAll() {
+      const preservedFilter = $('filterCategory')?.value || '';
+      const preservedQuery = $('searchQuestion')?.value || '';
+      renderAuthState();
+      renderDashboard();
+      renderAccounts();
+      renderCategoryOptions();
+      if ($('filterCategory')) $('filterCategory').value = preservedFilter;
+      if ($('searchQuestion')) $('searchQuestion').value = preservedQuery;
+      renderExamControls();
+      renderQuestions();
+      renderCategories();
+      renderSpecs();
+      fillTemplateForm();
+      renderExamPreview();
+      saveState();
+    }
+
+    function renderAuthState() {
+      const user = currentUser();
+      const loggedIn = Boolean(user);
+      $('loginScreen').classList.toggle('hidden', loggedIn);
+      document.querySelector('.app-shell').classList.toggle('hidden', !loggedIn);
+      if (!loggedIn) return;
+      $('currentUserName').textContent = user.fullName || user.username;
+      $('currentUserRole').textContent = user.role === 'admin' ? 'Quyền: Quản trị' : 'Quyền: Người dùng';
+      document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !isAdmin()));
+    }
+
+    function renderDashboard() {
+      if (!$('statCategories')) return;
+      $('statCategories').textContent = state.categories.length;
+      $('statQuestions').textContent = state.questions.length;
+      $('statExams').textContent = state.settings.totalExams;
+      $('statAccounts').textContent = state.accounts.length;
+      const user = currentUser();
+      $('profileSummary').innerHTML = user ? `
+        <div class="row-item">
+          <div class="row-title"><strong>${escapeHtml(user.fullName)}</strong><span class="pill">${user.role === 'admin' ? 'Quản trị' : 'Người dùng'}</span></div>
+          <div class="meta">Ngày sinh: ${escapeHtml(user.birthDate || 'Chưa cập nhật')}</div>
+          <div class="meta">Cấp bậc: ${escapeHtml(user.rank || 'Chưa cập nhật')}</div>
+          <div class="meta">Chức vụ: ${escapeHtml(user.position || 'Chưa cập nhật')}</div>
+          <div class="meta">Đơn vị: ${escapeHtml(user.unit || 'Chưa cập nhật')}</div>
+        </div>
+      ` : '';
+      $('categorySummary').innerHTML = state.categories.map((cat) => {
+        const count = state.questions.filter((q) => q.categoryId === cat.id).length;
+        return `<div class="row-item"><div class="row-title"><strong>${escapeHtml(cat.name)}</strong><span class="pill">${count} câu</span></div></div>`;
+      }).join('') || '<div class="empty">Chưa có mục câu hỏi.</div>';
+    }
+
+    function renderAccounts() {
+      if (!$('accountList')) return;
+      $('accountList').innerHTML = state.accounts.map((account) => `
+        <div class="row-item">
+          <div class="row-title">
+            <strong>${escapeHtml(account.fullName || account.username)}</strong>
+            <span class="actions">
+              <button class="secondary icon" title="Sửa" onclick="editAccount('${account.id}')">✎</button>
+              <button class="danger icon" title="Xóa" onclick="deleteAccount('${account.id}')">×</button>
+            </span>
+          </div>
+          <div class="meta">
+            <span class="pill">${escapeHtml(account.username)}</span>
+            <span class="pill">${account.role === 'admin' ? 'Quản trị' : 'Người dùng'}</span>
+          </div>
+          <div class="meta">${escapeHtml([account.rank, account.position, account.unit].filter(Boolean).join(' - ') || 'Chưa cập nhật thông tin')}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderCategoryOptions() {
+      const options = state.categories.map((cat) => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      $('questionCategory').innerHTML = options;
+      $('filterCategory').innerHTML = `<option value="">Tất cả mục</option>${options}`;
+    }
+
+    function renderExamControls() {
+      state.settings = normalizeSettings(state.settings);
+      $('totalExamCount').value = state.settings.totalExams;
+      $('selectedExamNo').innerHTML = examNumberOptions(state.settings.selectedExamNo);
+    }
+
+    function renderQuestions() {
+      const filter = $('filterCategory').value;
+      const query = $('searchQuestion').value.trim().toLowerCase();
+      const questions = state.questions.filter((q) => {
+        const byCategory = !filter || q.categoryId === filter;
+        const byText = !query || q.text.toLowerCase().includes(query) || categoryName(q.categoryId).toLowerCase().includes(query);
+        return byCategory && byText;
+      });
+
+      $('questionList').innerHTML = questions.length ? questions.map((q) => `
+        <div class="row-item">
+          <div class="row-title">
+            <strong>${escapeHtml(q.text)}</strong>
+            <span class="actions">
+              <button class="secondary icon" title="Sửa" onclick="editQuestion('${q.id}')">✎</button>
+              <button class="danger icon" title="Xóa" onclick="deleteQuestion('${q.id}')">×</button>
+            </span>
+          </div>
+          <div class="meta">
+            <span class="pill">${escapeHtml(categoryName(q.categoryId))}</span>
+            <span class="pill">${Number(q.points || 0)} điểm</span>
+          </div>
+          ${q.answer ? `<div class="meta">Đáp án: ${escapeHtml(q.answer)}</div>` : ''}
+        </div>
+      `).join('') : '<div class="empty">Chưa có câu hỏi nào phù hợp.</div>';
+    }
+
+    function renderCategories() {
+      $('categoryList').innerHTML = state.categories.map((cat) => {
+        const count = state.questions.filter((q) => q.categoryId === cat.id).length;
+        return `
+          <div class="row-item">
+            <div class="row-title">
+              <strong>${escapeHtml(cat.name)}</strong>
+              <span class="actions">
+                <button class="secondary icon" title="Đổi tên" onclick="renameCategory('${cat.id}')">✎</button>
+                <button class="danger icon" title="Xóa" onclick="deleteCategory('${cat.id}')">×</button>
+              </span>
+            </div>
+            <div class="meta">${count} câu hỏi</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSpecs() {
+      if (!state.specs.length && state.categories.length) {
+        state.specs.push({ categoryId: state.categories[0].id, count: 1 });
+      }
+      $('specList').innerHTML = state.specs.map((spec, index) => {
+        const options = state.categories.map((cat) => `<option value="${cat.id}" ${cat.id === spec.categoryId ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`).join('');
+        return `
+          <div class="spec-row">
+            <label>Mục
+              <select onchange="updateSpec(${index}, 'categoryId', this.value)">${options}</select>
+            </label>
+            <label>Số câu
+              <input type="number" min="0" value="${Number(spec.count || 0)}" onchange="updateSpec(${index}, 'count', this.value)">
+            </label>
+            <button class="danger icon" title="Xóa mục" onclick="removeSpec(${index})">×</button>
+          </div>
+        `;
+      }).join('');
+      const total = state.specs.reduce((sum, spec) => sum + Number(spec.count || 0), 0);
+      $('generatorHint').textContent = `Đang tạo đề số ${formatExamNo(state.settings.selectedExamNo)}. Tổng số câu sẽ lấy: ${total}. Phần mềm lấy ngẫu nhiên từ ngân hàng câu hỏi chung theo từng mục.`;
+    }
+
+    function syncPreviewCopies() {
+      const exam = $('examPreview');
+      const template = $('templatePreview');
+      if (exam && template) template.innerHTML = exam.innerHTML;
+    }
+
+    function fitPreviewHeaders() {
+      document.querySelectorAll('#examPreview .exam-head > div, #templatePreview .exam-head > div').forEach((el) => {
+        const original = Number.parseFloat(el.style.fontSize) || 14;
+        let size = original;
+        el.style.fontSize = `${size}pt`;
+        while (el.scrollWidth > el.clientWidth && size > 10) {
+          size -= 0.5;
+          el.style.fontSize = `${size}pt`;
+        }
+      });
+    }
+
+    function fillTemplateForm() {
+      const t = state.template;
+      $('tplLeftHeader').value = t.leftHeader;
+      $('tplCenterHeader').value = t.centerHeader;
+      $('tplRightHeader').value = t.rightHeader;
+      $('tplTitle').value = t.title;
+      $('tplSubject').value = t.subject;
+      $('tplDuration').value = t.duration;
+      $('tplCode').value = t.code;
+      $('tplStudentLine').value = t.studentLine;
+      $('tplInstruction').value = t.instruction;
+      $('tplNumberStyle').value = t.numberStyle;
+      $('tplAnswerSpace').value = t.answerSpace;
+      fillStyleControls();
+    }
+
+    function readTemplateForm() {
+      state.template = {
+        ...state.template,
+        leftHeader: $('tplLeftHeader').value,
+        centerHeader: $('tplCenterHeader').value,
+        rightHeader: $('tplRightHeader').value,
+        title: $('tplTitle').value,
+        subject: $('tplSubject').value,
+        duration: $('tplDuration').value,
+        code: $('tplCode').value,
+        studentLine: $('tplStudentLine').value,
+        instruction: $('tplInstruction').value,
+        numberStyle: $('tplNumberStyle').value,
+        answerSpace: $('tplAnswerSpace').value,
+        textStyles: {
+          ...structuredClone(defaultTextStyles),
+          ...(state.template.textStyles || {})
+        },
+        templateVersion: 4
+      };
+      saveState();
+      renderExamPreview();
+    }
+
+    function fillStyleControls() {
+      const key = $('styleTarget')?.value || 'headerLeft';
+      const style = getTextStyle(key);
+      $('styleFont').value = style.font;
+      $('styleSize').value = Number(style.size || 14);
+      $('styleAlign').value = style.align || 'left';
+      $('styleBold').checked = Boolean(style.bold);
+    }
+
+    function readStyleControls() {
+      const key = $('styleTarget').value;
+      state.template.textStyles = {
+        ...structuredClone(defaultTextStyles),
+        ...(state.template.textStyles || {}),
+        [key]: {
+          font: $('styleFont').value,
+          size: Math.max(8, Math.min(28, Number($('styleSize').value || 14))),
+          bold: $('styleBold').checked,
+          align: $('styleAlign').value
+        }
+      };
+      readTemplateForm();
+    }
+
+    function renderExamPreview() {
+      const t = state.template;
+      const warnings = [];
+      const grouped = state.currentExam;
+      const selectedExamNo = state.settings?.selectedExamNo || 1;
+      const questionsHtml = buildQuestionsHtml(grouped);
+
+      state.specs.forEach((spec) => {
+        const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+        if (Number(spec.count) > available) {
+          warnings.push(`Đề số ${formatExamNo(selectedExamNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
+        }
+      });
+
+      $('examPreview').innerHTML = `<div class="exam-half">${buildExamHtml(selectedExamNo, questionsHtml, warnings)}</div><div class="exam-half empty-half"></div>`;
+      syncPreviewCopies();
+      fitPreviewHeaders();
+    }
+
+    function buildQuestionsHtml(grouped) {
+      const t = state.template;
+      return grouped.length ? grouped.map((item, index) => {
+        const prefix = t.numberStyle ? `${escapeHtml(t.numberStyle)} ${index + 1}.` : `${index + 1}.`;
+        const spaceStyle = t.answerSpace === 'long' ? 'height:120px' : t.answerSpace === 'short' ? 'height:48px' : '';
+        return `
+          <div class="question" style="${styleAttr('question')}">
+            <strong>${prefix}</strong> ${lineBreaks(item.text)}
+            ${t.answerSpace !== 'none' ? `<div class="answer-space" style="${spaceStyle}"></div>` : ''}
+          </div>
+        `;
+      }).join('') : '<p><em>Chưa tạo đề. Hãy chọn cấu hình và bấm Tạo đề.</em></p>';
+    }
+
+    function buildExamHtml(examNo, questionsHtml, warnings = []) {
+      const t = state.template;
+      return `
+        <div class="exam-head ${String(t.centerHeader || '').trim() ? 'three-col' : 'two-col'}">
+          <div style="${styleAttr('headerLeft')}">${lineBreaks(t.leftHeader)}</div>
+          ${String(t.centerHeader || '').trim() ? `<div class="center-col" style="${styleAttr('headerCenter')}">${lineBreaks(t.centerHeader)}</div>` : ''}
+          <div style="${styleAttr('headerRight')}">${lineBreaks(t.rightHeader)}</div>
+        </div>
+        <div class="exam-title">
+          <h1 style="${styleAttr('title')}">${escapeHtml(examTitle(t.title, examNo))}</h1>
+          <div style="${styleAttr('subject')}">${escapeHtml(t.subject)}</div>
+          <div style="${styleAttr('duration')}">${escapeHtml(t.duration)}</div>
+          ${t.instruction ? `<div style="${styleAttr('instruction')}">${lineBreaks(t.instruction)}</div>` : ''}
+          ${t.code ? `<div style="${styleAttr('duration')}">${escapeHtml(t.code)}</div>` : ''}
+        </div>
+        ${t.studentLine ? `<div class="exam-info">${lineBreaks(t.studentLine)}</div>` : ''}
+        ${warnings.length ? `<p style="color:#a83636"><strong>Lưu ý:</strong> ${warnings.map(escapeHtml).join(' ')}</p>` : ''}
+        ${questionsHtml}
+      `;
+    }
+
+    function buildExamWordHtml(examNo, questionsHtml, warnings = []) {
+      const t = state.template;
+      const center = String(t.centerHeader || '').trim();
+      const headerCells = center
+        ? `
+          <td style="width:39%; ${styleAttr('headerLeft')}">${lineBreaks(t.leftHeader)}</td>
+          <td style="width:10%; ${styleAttr('headerCenter')}">${lineBreaks(t.centerHeader)}</td>
+          <td style="width:51%; ${styleAttr('headerRight')}">${lineBreaks(t.rightHeader)}</td>
+        `
+        : `
+          <td style="width:50%; ${styleAttr('headerLeft')}">${lineBreaks(t.leftHeader)}</td>
+          <td style="width:50%; ${styleAttr('headerRight')}">${lineBreaks(t.rightHeader)}</td>
+        `;
+      return `
+        <table class="word-header-table">
+          <tr>${headerCells}</tr>
+        </table>
+        <div class="exam-title">
+          <h1 style="${styleAttr('title')}">${escapeHtml(examTitle(t.title, examNo))}</h1>
+          <div style="${styleAttr('subject')}">${escapeHtml(t.subject)}</div>
+          <div style="${styleAttr('duration')}">${escapeHtml(t.duration)}</div>
+          ${t.instruction ? `<div style="${styleAttr('instruction')}">${lineBreaks(t.instruction)}</div>` : ''}
+          ${t.code ? `<div style="${styleAttr('duration')}">${escapeHtml(t.code)}</div>` : ''}
+        </div>
+        ${t.studentLine ? `<div class="exam-info">${lineBreaks(t.studentLine)}</div>` : ''}
+        ${warnings.length ? `<p style="color:#a83636"><strong>Lưu ý:</strong> ${warnings.map(escapeHtml).join(' ')}</p>` : ''}
+        ${questionsHtml}
+      `;
+    }
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function generateExam() {
+      readTemplateForm();
+      const selectedExamNo = state.settings.selectedExamNo;
+      const selected = buildExamQuestions(selectedExamNo);
+      state.currentExam = selected.map((q) => ({ ...q, categoryName: categoryName(q.categoryId) }));
+      saveState();
+      renderExamPreview();
+    }
+
+    function buildExamQuestions(examNo) {
+      const selected = [];
+      state.specs.forEach((spec) => {
+        const pool = state.questions.filter((q) => q.categoryId === spec.categoryId);
+        selected.push(...shuffle(pool).slice(0, Number(spec.count || 0)));
+      });
+      return selected.map((q) => ({ ...q, examNo: Number(examNo), categoryName: categoryName(q.categoryId) }));
+    }
+
+    function buildAllExamPages() {
+      const halves = Array.from({ length: state.settings.totalExams }, (_, index) => {
+        const examNo = index + 1;
+        const questions = buildExamQuestions(examNo);
+        const warnings = [];
+        state.specs.forEach((spec) => {
+          const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+          if (Number(spec.count) > available) {
+            warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
+          }
+        });
+        return `<div class="exam-half">${buildExamHtml(examNo, buildQuestionsHtml(questions), warnings)}</div>`;
+      });
+      const pages = [];
+      for (let i = 0; i < halves.length; i += 2) {
+        pages.push(`<article class="exam-paper${i + 2 < halves.length ? ' exam-page-break' : ''}">${halves[i]}${halves[i + 1] || '<div class="exam-half empty-half"></div>'}</article>`);
+      }
+      return pages.join('');
+    }
+
+    function buildAllExamWordPages() {
+      const halves = Array.from({ length: state.settings.totalExams }, (_, index) => {
+        const examNo = index + 1;
+        const questions = buildExamQuestions(examNo);
+        const warnings = [];
+        state.specs.forEach((spec) => {
+          const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+          if (Number(spec.count) > available) {
+            warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
+          }
+        });
+        return `<div class="exam-half">${buildExamWordHtml(examNo, buildQuestionsHtml(questions), warnings)}</div>`;
+      });
+      const pages = [];
+      for (let i = 0; i < halves.length; i += 2) {
+        pages.push(`<article class="exam-paper${i + 2 < halves.length ? ' exam-page-break' : ''}">${halves[i]}${halves[i + 1] || '<div class="exam-half empty-half"></div>'}</article>`);
+      }
+      return pages.join('');
+    }
+
+    function exportWord() {
+      readTemplateForm();
+      renderExamPreview();
+      const content = buildExamWordHtml(state.settings.selectedExamNo, buildQuestionsHtml(state.currentExam), []);
+      downloadWordDocument(content, `de-thi-${formatExamNo(state.settings.selectedExamNo)}-${new Date().toISOString().slice(0,10)}.doc`);
+    }
+
+    function exportAllWord() {
+      readTemplateForm();
+      downloadWordDocument(buildAllExamWordPages(), `tat-ca-de-thi-${new Date().toISOString().slice(0,10)}.doc`);
+    }
+
+    function downloadWordDocument(content, filename) {
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="utf-8"><title>Đề thi</title>
+        <style>
+          @page WordSection1 { size: 595.3pt 841.9pt; margin: 14.2pt 38.3pt 32.6pt 38.3pt; }
+          div.WordSection1 { page: WordSection1; }
+          body { font-family: "Times New Roman", serif; font-size: 14pt; line-height: 1.3; }
+          .exam-paper { width: 518.7pt; height: 795.1pt; min-height: 795.1pt; padding: 0; margin: 0 auto; overflow: hidden; }
+          .exam-half { height: 397.55pt; overflow: hidden; padding: 7pt 0; }
+          .empty-half { display: none; }
+          .word-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 30pt; border: none; }
+          .word-header-table td { border: none; vertical-align: top; padding: 0 10pt; white-space: nowrap; }
+          .exam-head { display: table; width: 100%; font-weight: bold; text-align: center; margin-bottom: 30pt; font-size: 14pt; }
+          .exam-head > div { display: table-cell; vertical-align: top; white-space: nowrap; text-align: center; }
+          .exam-head.two-col > div { width: 50%; }
+          .exam-head.three-col > div:first-child { width: 39%; }
+          .exam-head.three-col > div:nth-child(2) { width: 10%; }
+          .exam-head.three-col > div:last-child { width: 51%; }
+          .exam-head .center-col { vertical-align: bottom; }
+          .exam-title { text-align: center; margin: 0 0 13pt; font-size: 14pt; }
+          .exam-title h1 { font-size: 14pt; margin: 0 0 5pt; text-transform: uppercase; }
+          .question { margin: 6pt 0; page-break-inside: avoid; font-size: 14pt; }
+          .exam-page-break { page-break-after: always; }
+          .exam-page-break:last-child { page-break-after: auto; }
+          .answer-space { height: 70px; border-bottom: 1px dotted #888; margin-top: 8px; }
+        </style></head><body><div class="WordSection1">${content}</div></body></html>
+      `;
+      downloadBlob(html, filename, 'application/msword;charset=utf-8');
+    }
+
+    function printAllExams() {
+      readTemplateForm();
+      const original = $('examPreview').innerHTML;
+      $('examPreview').innerHTML = buildAllExamPages();
+      syncPreviewCopies();
+      window.print();
+      setTimeout(() => {
+        $('examPreview').innerHTML = original;
+        syncPreviewCopies();
+      }, 300);
+    }
+
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearQuestionForm() {
+      $('questionId').value = '';
+      $('questionText').value = '';
+      $('questionAnswer').value = '';
+      $('questionPoints').value = 1;
+      $('questionFormTitle').textContent = 'Thêm câu hỏi';
+    }
+
+    window.editQuestion = (id) => {
+      const q = state.questions.find((item) => item.id === id);
+      if (!q) return;
+      $('questionId').value = q.id;
+      $('questionCategory').value = q.categoryId;
+      $('questionText').value = q.text;
+      $('questionAnswer').value = q.answer || '';
+      $('questionPoints').value = q.points || 1;
+      $('questionFormTitle').textContent = 'Sửa câu hỏi';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.deleteQuestion = (id) => {
+      if (!confirm('Xóa câu hỏi này?')) return;
+      state.questions = state.questions.filter((q) => q.id !== id);
+      state.currentExam = state.currentExam.filter((q) => q.id !== id);
+      renderAll();
+    };
+
+    window.renameCategory = (id) => {
+      const cat = state.categories.find((item) => item.id === id);
+      if (!cat) return;
+      const name = prompt('Nhập tên mục mới:', cat.name);
+      if (!name?.trim()) return;
+      cat.name = name.trim();
+      renderAll();
+    };
+
+    window.deleteCategory = (id) => {
+      const used = state.questions.some((q) => q.categoryId === id);
+      if (used && !confirm('Mục này đang có câu hỏi. Xóa mục sẽ xóa luôn các câu hỏi trong mục. Bạn chắc chắn?')) return;
+      state.categories = state.categories.filter((cat) => cat.id !== id);
+      state.questions = state.questions.filter((q) => q.categoryId !== id);
+      state.specs = state.specs.filter((spec) => spec.categoryId !== id);
+      renderAll();
+    };
+
+    window.updateSpec = (index, key, value) => {
+      state.specs[index][key] = key === 'count' ? Math.max(0, Number(value || 0)) : value;
+      renderSpecs();
+      saveState();
+      renderExamPreview();
+    };
+
+    window.removeSpec = (index) => {
+      state.specs.splice(index, 1);
+      renderSpecs();
+      saveState();
+      renderExamPreview();
+    };
+
+    function clearAccountForm() {
+      $('accountId').value = '';
+      $('accountUsername').value = '';
+      $('accountPassword').value = '';
+      $('accountRole').value = 'user';
+      $('accountFullName').value = '';
+      $('accountBirthDate').value = '';
+      $('accountRank').value = '';
+      $('accountPosition').value = '';
+      $('accountUnit').value = '';
+      $('accountFormTitle').textContent = 'Thêm tài khoản';
+    }
+
+    window.editAccount = (id) => {
+      if (!requireAdmin()) return;
+      const account = state.accounts.find((item) => item.id === id);
+      if (!account) return;
+      $('accountId').value = account.id;
+      $('accountUsername').value = account.username;
+      $('accountPassword').value = account.password;
+      $('accountRole').value = account.role;
+      $('accountFullName').value = account.fullName;
+      $('accountBirthDate').value = account.birthDate;
+      $('accountRank').value = account.rank;
+      $('accountPosition').value = account.position;
+      $('accountUnit').value = account.unit;
+      $('accountFormTitle').textContent = 'Sửa tài khoản';
+    };
+
+    window.deleteAccount = (id) => {
+      if (!requireAdmin()) return;
+      if (state.accounts.length <= 1) return alert('Phải giữ lại ít nhất một tài khoản.');
+      if (id === state.settings.currentUserId) return alert('Không thể xóa tài khoản đang đăng nhập.');
+      if (!confirm('Xóa tài khoản này?')) return;
+      state.accounts = state.accounts.filter((account) => account.id !== id);
+      renderAll();
+    };
+
+    function switchView(view) {
+      if (view === 'accounts' && !isAdmin()) view = 'dashboard';
+      document.querySelectorAll('.nav button').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+      document.querySelectorAll('main > section').forEach((section) => section.classList.add('hidden'));
+      $(`view-${view}`).classList.remove('hidden');
+      renderExamPreview();
+    }
+
+    function updateTotalExams(value) {
+      const totalExams = Math.max(1, Number(value || 1));
+      state.settings.totalExams = totalExams;
+      state.settings.selectedExamNo = Math.min(totalExams, Math.max(1, Number(state.settings.selectedExamNo || 1)));
+      state.questions = normalizeQuestions(state.questions);
+      state.currentExam = [];
+      renderAll();
+    }
+
+    function updateSelectedExamNo(value) {
+      state.settings.selectedExamNo = Math.min(state.settings.totalExams, Math.max(1, Number(value || 1)));
+      state.currentExam = [];
+      renderExamControls();
+      renderSpecs();
+      saveState();
+      renderExamPreview();
+    }
+
+    document.querySelectorAll('.nav button').forEach((button) => {
+      button.addEventListener('click', () => {
+        switchView(button.dataset.view);
+      });
+    });
+
+    $('loginForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const username = $('loginUsername').value.trim();
+      const password = $('loginPassword').value;
+      const account = state.accounts.find((item) => item.username === username && item.password === password);
+      if (!account) {
+        $('loginError').textContent = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+        return;
+      }
+      $('loginError').textContent = '';
+      state.settings.currentUserId = account.id;
+      saveState();
+      renderAll();
+      switchView('dashboard');
+    });
+
+    $('logoutBtn').addEventListener('click', () => {
+      state.settings.currentUserId = null;
+      saveState();
+      renderAuthState();
+    });
+
+    $('questionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const payload = {
+        id: $('questionId').value || crypto.randomUUID(),
+        categoryId: $('questionCategory').value,
+        text: $('questionText').value.trim(),
+        answer: $('questionAnswer').value.trim(),
+        points: Number($('questionPoints').value || 0)
+      };
+      if (!payload.text) return;
+      const existing = state.questions.findIndex((q) => q.id === payload.id);
+      if (existing >= 0) state.questions[existing] = payload;
+      else state.questions.push(payload);
+      clearQuestionForm();
+      renderAll();
+    });
+
+    $('clearQuestionForm').addEventListener('click', clearQuestionForm);
+    $('cancelEditQuestion').addEventListener('click', clearQuestionForm);
+    $('filterCategory').addEventListener('change', renderQuestions);
+    $('searchQuestion').addEventListener('input', renderQuestions);
+    $('totalExamCount').addEventListener('change', (event) => updateTotalExams(event.target.value));
+    $('selectedExamNo').addEventListener('change', (event) => updateSelectedExamNo(event.target.value));
+
+    $('categoryForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!requireAdmin()) return;
+      const name = $('categoryName').value.trim();
+      if (!name) return;
+      state.categories.push({ id: crypto.randomUUID(), name });
+      $('categoryName').value = '';
+      renderAll();
+    });
+
+    $('addSpec').addEventListener('click', () => {
+      if (!state.categories.length) return alert('Hãy thêm ít nhất một mục câu hỏi trước.');
+      state.specs.push({ categoryId: state.categories[0].id, count: 1 });
+      renderSpecs();
+      saveState();
+    });
+
+    $('generateExam').addEventListener('click', generateExam);
+    $('exportWord').addEventListener('click', exportWord);
+    $('exportAllWord').addEventListener('click', exportAllWord);
+    $('printExam').addEventListener('click', () => {
+      readTemplateForm();
+      renderExamPreview();
+      window.print();
+    });
+    $('printAllExam').addEventListener('click', printAllExams);
+    $('saveTemplate').addEventListener('click', () => {
+      readTemplateForm();
+      alert('Đã lưu form đề thi.');
+    });
+    $('resetTemplate').addEventListener('click', () => {
+      if (!requireAdmin()) return;
+      state.template = { ...defaultTemplate };
+      renderAll();
+    });
+
+    $('accountForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!requireAdmin()) return;
+      const id = $('accountId').value || crypto.randomUUID();
+      const username = $('accountUsername').value.trim();
+      const duplicate = state.accounts.some((account) => account.username === username && account.id !== id);
+      if (duplicate) return alert('Tên đăng nhập đã tồn tại.');
+      const payload = {
+        id,
+        username,
+        password: $('accountPassword').value,
+        role: $('accountRole').value,
+        fullName: $('accountFullName').value.trim(),
+        birthDate: $('accountBirthDate').value,
+        rank: $('accountRank').value.trim(),
+        position: $('accountPosition').value.trim(),
+        unit: $('accountUnit').value.trim()
+      };
+      const index = state.accounts.findIndex((account) => account.id === id);
+      if (index >= 0) state.accounts[index] = payload;
+      else state.accounts.push(payload);
+      clearAccountForm();
+      renderAll();
+    });
+    $('clearAccountForm').addEventListener('click', clearAccountForm);
+    $('cancelEditAccount').addEventListener('click', clearAccountForm);
+
+    $('backupData').addEventListener('click', () => {
+      downloadBlob(JSON.stringify(state, null, 2), `sao-luu-de-thi-${new Date().toISOString().slice(0,10)}.json`, 'application/json;charset=utf-8');
+    });
+
+    $('restoreData').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          state = {
+            categories: imported.categories || [],
+            questions: normalizeQuestions(imported.questions || []),
+            specs: imported.specs || [],
+            template: normalizeTemplate(imported.template),
+            settings: normalizeSettings(imported.settings),
+            accounts: normalizeAccounts(imported.accounts),
+            currentExam: imported.currentExam || []
+          };
+          renderAll();
+          alert('Đã khôi phục dữ liệu.');
+        } catch {
+          alert('File sao lưu không hợp lệ.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    $('resetAll').addEventListener('click', () => {
+      if (!requireAdmin()) return;
+      if (!confirm('Xóa tất cả dữ liệu và quay về dữ liệu mẫu?')) return;
+      localStorage.removeItem(STORE_KEY);
+      state = structuredClone(sampleData);
+      renderAll();
+    });
+
+    document.querySelectorAll('#templateForm input, #templateForm textarea, #templateForm select').forEach((input) => {
+      input.addEventListener('input', readTemplateForm);
+      input.addEventListener('change', readTemplateForm);
+    });
+    $('styleTarget').addEventListener('change', fillStyleControls);
+    ['styleFont', 'styleSize', 'styleAlign', 'styleBold'].forEach((id) => {
+      $(id).addEventListener('input', readStyleControls);
+      $(id).addEventListener('change', readStyleControls);
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
