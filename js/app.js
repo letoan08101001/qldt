@@ -4,6 +4,7 @@
     const trialEndKey = 'exam_manager_trial_end';
     let trialTimer = null;
     let sessionUserId = null;
+    let activeModule = null;
     const defaultSettings = {
       totalExams: 10,
       selectedExamNo: 1,
@@ -47,6 +48,7 @@
       instruction: 'Hình thức thi: Vấn đáp + thực hành',
       numberStyle: 'Câu',
       answerSpace: 'none',
+      examGapLines: 10,
       textStyles: structuredClone(defaultTextStyles),
       templateVersion: 4
     };
@@ -62,7 +64,8 @@
       template: { ...defaultTemplate },
       settings: { ...defaultSettings },
       accounts: structuredClone(defaultAccounts),
-      currentExam: []
+      currentExam: [],
+      savedExams: {}
     };
     sampleData.questions = [
       { id: crypto.randomUUID(), categoryId: sampleData.categories[0].id, text: 'Trình bày khái niệm và vai trò của nội dung đã học.', answer: '', points: 1 },
@@ -98,7 +101,8 @@
           template,
           settings,
           accounts: normalizeAccounts(parsed.accounts),
-          currentExam: parsed.currentExam || []
+          currentExam: parsed.currentExam || [],
+          savedExams: normalizeSavedExams(parsed.savedExams)
         };
       } catch {
         return structuredClone(sampleData);
@@ -196,6 +200,7 @@
       return {
         ...defaultTemplate,
         ...template,
+        examGapLines: Math.min(10, Math.max(1, Number(template.examGapLines || defaultTemplate.examGapLines))),
         textStyles: {
           ...structuredClone(defaultTextStyles),
           subject: { ...defaultTextStyles.subject, ...oldMeta, ...(template.textStyles?.subject || {}) },
@@ -220,6 +225,13 @@
       }));
     }
 
+    function normalizeSavedExams(savedExams = {}) {
+      return Object.fromEntries(Object.entries(savedExams || {}).map(([examNo, questions]) => [
+        String(Math.max(1, Number(examNo || 1))),
+        Array.isArray(questions) ? questions.map((q) => ({ ...q, examNo: undefined })) : []
+      ]));
+    }
+
     function examNumberOptions(selected) {
       const total = Math.max(1, Number(state.settings?.totalExams || defaultSettings.totalExams));
       return Array.from({ length: total }, (_, index) => {
@@ -232,6 +244,25 @@
       const number = Number(examNo);
       const safeNumber = Number.isFinite(number) && number > 0 ? number : 1;
       return String(Math.trunc(safeNumber)).padStart(2, '0');
+    }
+
+    function examKey(examNo) {
+      return String(Math.max(1, Math.trunc(Number(examNo || 1))));
+    }
+
+    function getSavedExam(examNo) {
+      state.savedExams = normalizeSavedExams(state.savedExams);
+      return state.savedExams[examKey(examNo)] || [];
+    }
+
+    function setSavedExam(examNo, questions) {
+      state.savedExams = normalizeSavedExams(state.savedExams);
+      state.savedExams[examKey(examNo)] = questions.map((q) => ({ ...q, examNo: undefined }));
+    }
+
+    function examForPreview(examNo) {
+      const saved = getSavedExam(examNo);
+      return saved.map((q) => ({ ...q, examNo: Number(examNo), categoryName: q.categoryName || categoryName(q.categoryId) }));
     }
 
     function examTitle(title, examNo) {
@@ -283,8 +314,10 @@
       const user = currentUser();
       const loggedIn = Boolean(user);
       $('loginScreen').classList.toggle('hidden', loggedIn);
-      document.querySelector('.app-shell').classList.toggle('hidden', !loggedIn);
+      $('moduleScreen').classList.toggle('hidden', !loggedIn || Boolean(activeModule));
+      document.querySelector('.app-shell').classList.toggle('hidden', !loggedIn || activeModule !== 'exam');
       if (!loggedIn) return;
+      $('moduleUserName').textContent = user.fullName || user.username;
       $('currentUserName').textContent = user.fullName || user.username;
       $('currentUserRole').textContent = user.role === 'admin' ? 'Quyền: Quản trị' : 'Quyền: Người dùng';
       document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !isAdmin()));
@@ -442,6 +475,7 @@
       $('tplInstruction').value = t.instruction;
       $('tplNumberStyle').value = t.numberStyle;
       $('tplAnswerSpace').value = t.answerSpace;
+      $('tplExamGapLines').value = t.examGapLines;
       fillStyleControls();
     }
 
@@ -459,6 +493,7 @@
         instruction: $('tplInstruction').value,
         numberStyle: $('tplNumberStyle').value,
         answerSpace: $('tplAnswerSpace').value,
+        examGapLines: Math.min(10, Math.max(1, Number($('tplExamGapLines').value || defaultTemplate.examGapLines))),
         textStyles: {
           ...structuredClone(defaultTextStyles),
           ...(state.template.textStyles || {})
@@ -494,22 +529,30 @@
     }
 
     function renderExamPreview() {
-      const t = state.template;
-      const warnings = [];
-      const grouped = state.currentExam;
       const selectedExamNo = state.settings?.selectedExamNo || 1;
-      const questionsHtml = buildQuestionsHtml(grouped);
+      const firstExamNo = Math.floor((selectedExamNo - 1) / 2) * 2 + 1;
+      const halves = [firstExamNo, firstExamNo + 1].map((examNo) => {
+        if (examNo > state.settings.totalExams) return '<div class="exam-half empty-half"></div>';
+        const questions = examNo === selectedExamNo && state.currentExam.length
+          ? state.currentExam
+          : examForPreview(examNo);
+        return `<div class="exam-half">${buildExamHtml(examNo, buildQuestionsHtml(questions), examWarnings(examNo))}</div>`;
+      });
 
+      $('examPreview').innerHTML = halves.join('');
+      syncPreviewCopies();
+      fitPreviewHeaders();
+    }
+
+    function examWarnings(examNo) {
+      const warnings = [];
       state.specs.forEach((spec) => {
         const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
         if (Number(spec.count) > available) {
-          warnings.push(`Đề số ${formatExamNo(selectedExamNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
+          warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
         }
       });
-
-      $('examPreview').innerHTML = `<div class="exam-half">${buildExamHtml(selectedExamNo, questionsHtml, warnings)}</div><div class="exam-half empty-half"></div>`;
-      syncPreviewCopies();
-      fitPreviewHeaders();
+      return warnings;
     }
 
     function buildQuestionsHtml(grouped) {
@@ -588,12 +631,21 @@
     }
 
     function generateExam() {
-      readTemplateForm();
       const selectedExamNo = state.settings.selectedExamNo;
       const selected = buildExamQuestions(selectedExamNo);
       state.currentExam = selected.map((q) => ({ ...q, categoryName: categoryName(q.categoryId) }));
+      setSavedExam(selectedExamNo, state.currentExam);
       saveState();
       renderExamPreview();
+    }
+
+    function saveGeneratedExam() {
+      const selectedExamNo = state.settings.selectedExamNo;
+      if (!state.currentExam.length) return alert('Chưa có đề để lưu. Hãy bấm Tạo đề trước.');
+      setSavedExam(selectedExamNo, state.currentExam);
+      saveState();
+      renderExamPreview();
+      alert(`Đã lưu đề số ${formatExamNo(selectedExamNo)}.`);
     }
 
     function buildExamQuestions(examNo) {
@@ -620,15 +672,17 @@
       });
       const pages = [];
       for (let i = 0; i < halves.length; i += 2) {
-        pages.push(`<article class="exam-paper${i + 2 < halves.length ? ' exam-page-break' : ''}">${halves[i]}${halves[i + 1] || '<div class="exam-half empty-half"></div>'}</article>`);
+        pages.push(`<div class="exam-paper${i + 2 < halves.length ? ' exam-page-break' : ''}">${halves[i]}${halves[i + 1] || '<div class="exam-half empty-half"></div>'}</div>`);
       }
       return pages.join('');
     }
 
     function buildAllExamWordPages() {
-      const halves = Array.from({ length: state.settings.totalExams }, (_, index) => {
+      const parts = [];
+      for (let index = 0; index < state.settings.totalExams; index++) {
         const examNo = index + 1;
-        const questions = buildExamQuestions(examNo);
+        const savedQuestions = examForPreview(examNo);
+        const questions = savedQuestions.length ? savedQuestions : buildExamQuestions(examNo);
         const warnings = [];
         state.specs.forEach((spec) => {
           const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
@@ -636,24 +690,31 @@
             warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
           }
         });
-        return `<div class="exam-half">${buildExamWordHtml(examNo, buildQuestionsHtml(questions), warnings)}</div>`;
-      });
-      const pages = [];
-      for (let i = 0; i < halves.length; i += 2) {
-        pages.push(`<article class="exam-paper${i + 2 < halves.length ? ' exam-page-break' : ''}">${halves[i]}${halves[i + 1] || '<div class="exam-half empty-half"></div>'}</article>`);
+        parts.push(`<div class="word-exam">${buildExamWordHtml(examNo, buildQuestionsHtml(questions), warnings)}</div>`);
+        if (examNo < state.settings.totalExams) {
+          parts.push(buildWordExamGap());
+          if (examNo % 2 === 0) parts.push('<div class="exam-page-break"></div>');
+        }
       }
-      return pages.join('');
+      return parts.join('');
+    }
+
+    function buildWordExamGap() {
+      const lines = Math.min(10, Math.max(1, Number(state.template.examGapLines || defaultTemplate.examGapLines)));
+      return Array.from({ length: lines }, () => `
+        <p class="MsoNormal word-gap-line">
+          <span style="font-size:14.0pt;mso-fareast-font-family:&quot;Times New Roman&quot;"><o:p>&nbsp;</o:p></span>
+        </p>
+      `).join('');
     }
 
     function exportWord() {
-      readTemplateForm();
       renderExamPreview();
-      const content = buildExamWordHtml(state.settings.selectedExamNo, buildQuestionsHtml(state.currentExam), []);
+      const content = `<div class="word-exam">${buildExamWordHtml(state.settings.selectedExamNo, buildQuestionsHtml(state.currentExam), [])}</div>`;
       downloadWordDocument(content, `de-thi-${formatExamNo(state.settings.selectedExamNo)}-${new Date().toISOString().slice(0,10)}.doc`);
     }
 
     function exportAllWord() {
-      readTemplateForm();
       downloadWordDocument(buildAllExamWordPages(), `tat-ca-de-thi-${new Date().toISOString().slice(0,10)}.doc`);
     }
 
@@ -665,9 +726,8 @@
           @page WordSection1 { size: 595.3pt 841.9pt; margin: 14.2pt 38.3pt 32.6pt 38.3pt; }
           div.WordSection1 { page: WordSection1; }
           body { font-family: "Times New Roman", serif; font-size: 14pt; line-height: 1.3; }
-          .exam-paper { width: 518.7pt; height: 795.1pt; min-height: 795.1pt; padding: 0; margin: 0 auto; overflow: hidden; }
-          .exam-half { height: 397.55pt; overflow: hidden; padding: 7pt 0; }
-          .empty-half { display: none; }
+          .word-exam { margin: 0; }
+          .word-gap-line { margin: 0; font-size: 14pt; line-height: 1.3; }
           .word-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 30pt; border: none; }
           .word-header-table td { border: none; vertical-align: top; padding: 0 10pt; white-space: nowrap; }
           .exam-head { display: table; width: 100%; font-weight: bold; text-align: center; margin-bottom: 30pt; font-size: 14pt; }
@@ -680,8 +740,7 @@
           .exam-title { text-align: center; margin: 0 0 13pt; font-size: 14pt; }
           .exam-title h1 { font-size: 14pt; margin: 0 0 5pt; text-transform: uppercase; }
           .question { margin: 6pt 0; page-break-inside: avoid; font-size: 14pt; }
-          .exam-page-break { page-break-after: always; }
-          .exam-page-break:last-child { page-break-after: auto; }
+          .exam-page-break { page-break-after: always; height: 0; line-height: 0; font-size: 0; }
           .answer-space { height: 70px; border-bottom: 1px dotted #888; margin-top: 8px; }
         </style></head><body><div class="WordSection1">${content}</div></body></html>
       `;
@@ -689,7 +748,6 @@
     }
 
     function printAllExams() {
-      readTemplateForm();
       const original = $('examPreview').innerHTML;
       $('examPreview').innerHTML = buildAllExamPages();
       syncPreviewCopies();
@@ -736,6 +794,9 @@
       if (!confirm('Xóa câu hỏi này?')) return;
       state.questions = state.questions.filter((q) => q.id !== id);
       state.currentExam = state.currentExam.filter((q) => q.id !== id);
+      Object.keys(state.savedExams || {}).forEach((examNo) => {
+        state.savedExams[examNo] = state.savedExams[examNo].filter((q) => q.id !== id);
+      });
       renderAll();
     };
 
@@ -754,6 +815,9 @@
       state.categories = state.categories.filter((cat) => cat.id !== id);
       state.questions = state.questions.filter((q) => q.categoryId !== id);
       state.specs = state.specs.filter((spec) => spec.categoryId !== id);
+      Object.keys(state.savedExams || {}).forEach((examNo) => {
+        state.savedExams[examNo] = state.savedExams[examNo].filter((q) => q.categoryId !== id);
+      });
       renderAll();
     };
 
@@ -822,13 +886,16 @@
       state.settings.totalExams = totalExams;
       state.settings.selectedExamNo = Math.min(totalExams, Math.max(1, Number(state.settings.selectedExamNo || 1)));
       state.questions = normalizeQuestions(state.questions);
-      state.currentExam = [];
+      Object.keys(state.savedExams || {}).forEach((examNo) => {
+        if (Number(examNo) > totalExams) delete state.savedExams[examNo];
+      });
+      state.currentExam = examForPreview(state.settings.selectedExamNo);
       renderAll();
     }
 
     function updateSelectedExamNo(value) {
       state.settings.selectedExamNo = Math.min(state.settings.totalExams, Math.max(1, Number(value || 1)));
-      state.currentExam = [];
+      state.currentExam = examForPreview(state.settings.selectedExamNo);
       renderExamControls();
       renderSpecs();
       saveState();
@@ -856,8 +923,8 @@
       }
       $('loginError').textContent = '';
       sessionUserId = account.id;
+      activeModule = null;
       renderAll();
-      switchView('dashboard');
     });
 
     $('trialOkBtn').addEventListener('click', () => {
@@ -870,6 +937,28 @@
 
     $('logoutBtn').addEventListener('click', () => {
       sessionUserId = null;
+      activeModule = null;
+      renderAuthState();
+    });
+
+    $('moduleLogoutBtn').addEventListener('click', () => {
+      sessionUserId = null;
+      activeModule = null;
+      renderAuthState();
+    });
+
+    $('openExamManager').addEventListener('click', () => {
+      activeModule = 'exam';
+      renderAuthState();
+      switchView('dashboard');
+    });
+
+    $('openDiplomaManager').addEventListener('click', () => {
+      alert('Chức năng Quản lý văn bằng sẽ được bổ sung sau.');
+    });
+
+    $('backToModules').addEventListener('click', () => {
+      activeModule = null;
       renderAuthState();
     });
 
@@ -915,10 +1004,10 @@
     });
 
     $('generateExam').addEventListener('click', generateExam);
+    $('saveGeneratedExam').addEventListener('click', saveGeneratedExam);
     $('exportWord').addEventListener('click', exportWord);
     $('exportAllWord').addEventListener('click', exportAllWord);
     $('printExam').addEventListener('click', () => {
-      readTemplateForm();
       renderExamPreview();
       window.print();
     });
@@ -978,7 +1067,8 @@
             template: normalizeTemplate(imported.template),
             settings: normalizeSettings(imported.settings),
             accounts: normalizeAccounts(imported.accounts),
-            currentExam: imported.currentExam || []
+            currentExam: imported.currentExam || [],
+            savedExams: normalizeSavedExams(imported.savedExams)
           };
           renderAll();
           alert('Đã khôi phục dữ liệu.');
@@ -997,10 +1087,6 @@
       renderAll();
     });
 
-    document.querySelectorAll('#templateForm input, #templateForm textarea, #templateForm select').forEach((input) => {
-      input.addEventListener('input', readTemplateForm);
-      input.addEventListener('change', readTemplateForm);
-    });
     $('styleTarget').addEventListener('change', fillStyleControls);
     ['styleFont', 'styleSize', 'styleAlign', 'styleBold'].forEach((id) => {
       $(id).addEventListener('input', readStyleControls);

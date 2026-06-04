@@ -9,8 +9,8 @@
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
-      <h1>Quản lý đề thi</h1>
-      <p>Đăng nhập để quản lý ngân hàng câu hỏi, form đề thi và tài khoản người dùng.</p>
+      <h1>Hệ thống quản lý</h1>
+      <p>Đăng nhập để chọn chức năng làm việc.</p>
       <form id="loginForm" class="login-form">
         <label>
           Tên đăng nhập
@@ -23,6 +23,34 @@
         <button type="submit">Đăng nhập</button>
         <div id="loginError" class="login-error"></div>
       </form>
+    </div>
+  </section>
+
+  <section id="moduleScreen" class="module-screen hidden">
+    <div class="module-shell">
+      <div class="module-head">
+        <div>
+          <h1>Chọn chức năng</h1>
+          <p>Chọn khu vực quản lý để bắt đầu làm việc.</p>
+        </div>
+        <div class="module-user">
+          <div>Đang đăng nhập: <strong id="moduleUserName"></strong></div>
+          <button class="secondary" id="moduleLogoutBtn" type="button">Đăng xuất</button>
+        </div>
+      </div>
+
+      <div class="module-grid">
+        <button class="module-card" id="openExamManager" type="button">
+          <span class="module-icon">☰</span>
+          <strong>Quản lý đề thi</strong>
+          <small>Ngân hàng câu hỏi, tạo đề, xuất Word và in đề thi.</small>
+        </button>
+        <button class="module-card pending" id="openDiplomaManager" type="button">
+          <span class="module-icon">▣</span>
+          <strong>Quản lý văn bằng</strong>
+          <small>Chức năng này sẽ được bổ sung sau.</small>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -42,6 +70,7 @@
         <p>Ngân hàng câu hỏi, trộn đề theo mục, xuất Word và in trực tiếp.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng">
+        <button class="secondary" id="backToModules" type="button">← Chọn chức năng</button>
         <button class="active" data-view="dashboard">▦ Dashboard</button>
         <button data-view="questions">☰ Câu hỏi</button>
         <button data-view="generator">⚙ Tạo đề</button>
@@ -160,6 +189,7 @@
           </div>
           <div class="actions">
             <button id="generateExam">Tạo đề</button>
+            <button class="secondary" id="saveGeneratedExam">Lưu đề</button>
             <button class="warning" id="exportWord">Xuất Word</button>
             <button class="secondary" id="printExam">In trực tiếp</button>
             <button class="warning" id="exportAllWord">Xuất tất cả đề</button>
@@ -259,6 +289,10 @@
                 <option value="short">Ngắn</option>
                 <option value="long">Dài</option>
               </select>
+            </label>
+            <label>
+              Khoảng cách giữa 2 đề
+              <input id="tplExamGapLines" type="number" min="1" max="10" value="10">
             </label>
           </form>
         </section>

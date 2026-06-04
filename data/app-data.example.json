@@ -1,0 +1,24 @@
+{
+  "categories": [],
+  "questions": [],
+  "specs": [],
+  "template": {},
+  "settings": {
+    "totalExams": 10,
+    "selectedExamNo": 1
+  },
+  "accounts": [
+    {
+      "id": "admin",
+      "username": "admin",
+      "passwordHash": "replace-with-password-hash",
+      "role": "admin",
+      "fullName": "Quan tri he thong",
+      "birthDate": "",
+      "rank": "",
+      "position": "Quan tri vien",
+      "unit": "Ban quan tri"
+    }
+  ],
+  "savedExams": {}
+}

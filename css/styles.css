@@ -82,6 +82,80 @@
     textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
     label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
 
+    .module-screen {
+      min-height: 100vh;
+      padding: 32px;
+      display: grid;
+      place-items: center;
+      animation: fadeIn .35s var(--ease);
+    }
+
+    .module-shell {
+      width: min(980px, 100%);
+      display: grid;
+      gap: 20px;
+    }
+
+    .module-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .module-head h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+    .module-head p { margin: 8px 0 0; color: var(--muted); }
+
+    .module-user {
+      display: grid;
+      gap: 10px;
+      justify-items: end;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .module-card {
+      min-height: 190px;
+      display: grid;
+      align-content: start;
+      justify-items: start;
+      gap: 12px;
+      text-align: left;
+      border-radius: var(--radius);
+      border: 1px solid rgba(15, 122, 102, .18);
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .module-card:hover { box-shadow: var(--shadow-strong); }
+    .module-card.pending { background: #f8fbf9; border-color: var(--line); }
+    .module-card strong { font-size: 22px; }
+    .module-card small { color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    .module-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-size: 22px;
+    }
+
     .app-shell {
       display: grid;
       grid-template-columns: 270px minmax(0, 1fr);
@@ -317,6 +391,7 @@
     .exam-paper {
       background: #fff;
       width: min(100%, 21cm);
+      height: 29.7cm;
       min-height: 29.7cm;
       margin: 0 auto;
       padding: .5cm 1.35cm 1.15cm;
@@ -325,6 +400,7 @@
       line-height: 1.35;
       font-family: "Times New Roman", Times, serif;
       font-size: 14pt;
+      overflow: hidden;
     }
 
     .exam-page-break {
@@ -334,6 +410,7 @@
 
     .exam-half {
       height: 14.025cm;
+      box-sizing: border-box;
       overflow: hidden;
       padding: .25cm 0;
     }
@@ -830,6 +907,6 @@
       .print-panel { border: 0; box-shadow: none; padding: 0; }
       .preview-wrap { border: 0; background: #fff; padding: 0; overflow: visible; }
       .exam-paper { width: 18.3cm; height: 28.05cm; min-height: 28.05cm; box-shadow: none; padding: 0; margin: 0 auto; overflow: hidden; }
-      .exam-half { height: 14.025cm; padding: .25cm 0; overflow: hidden; }
+      .exam-half { height: 14.025cm; box-sizing: border-box; padding: .25cm 0; overflow: hidden; }
       .empty-half { display: none; }
     }
