@@ -45,10 +45,10 @@
           <strong>Quản lý đề thi</strong>
           <small>Ngân hàng câu hỏi, tạo đề, xuất Word và in đề thi.</small>
         </button>
-        <button class="module-card pending" id="openDiplomaManager" type="button">
+        <button class="module-card" id="openDiplomaManager" type="button">
           <span class="module-icon">▣</span>
           <strong>Quản lý văn bằng</strong>
-          <small>Chức năng này sẽ được bổ sung sau.</small>
+          <small>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</small>
         </button>
       </div>
     </div>
@@ -428,6 +428,138 @@
             <div id="accountList" class="list"></div>
           </section>
         </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="diplomaShell" class="diploma-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Quản lý văn bằng</h1>
+        <p>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</p>
+      </div>
+      <nav class="nav" aria-label="Điều hướng văn bằng">
+        <button class="secondary" id="backToModulesFromDiploma" type="button">← Chọn chức năng</button>
+        <button class="active" data-diploma-view="students">▦ Học viên</button>
+        <button data-diploma-view="designer">✎ Mẫu văn bằng</button>
+        <button data-diploma-view="preview">▣ In văn bằng</button>
+      </nav>
+      <div class="user-box">
+        <div>Đang đăng nhập: <strong id="diplomaUserName"></strong></div>
+        <button class="secondary" id="diplomaLogoutBtn" type="button">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="diploma-view-students">
+        <div class="topbar">
+          <div>
+            <h2>Học viên</h2>
+            <p>Lưu thông tin học viên để in văn bằng theo mẫu đã thiết kế.</p>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="clearDiplomaStudentForm" type="button">Làm mới form</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <section class="panel">
+            <h3 id="diplomaStudentFormTitle">Thêm học viên</h3>
+            <form id="diplomaStudentForm" class="form-grid">
+              <input type="hidden" id="diplomaStudentId">
+              <label>Họ và tên<input id="diplomaFullName" required></label>
+              <label>Ngày sinh<input id="diplomaBirthDate" type="date"></label>
+              <label>Cấp bậc<input id="diplomaRank"></label>
+              <label>Chức vụ<input id="diplomaPosition"></label>
+              <label>Đơn vị<input id="diplomaUnit"></label>
+              <label>Ngày nhập học<input id="diplomaStartDate" type="date"></label>
+              <label>Ngày tốt nghiệp<input id="diplomaGraduationDate" type="date"></label>
+              <label>Loại bằng<input id="diplomaType" placeholder="Ví dụ: Giỏi, Khá..."></label>
+              <label class="full">Ảnh học viên<input id="diplomaPhotoFile" type="file" accept="image/*"></label>
+              <input type="hidden" id="diplomaPhotoData">
+              <div class="actions full">
+                <button type="submit">Lưu học viên</button>
+                <button type="button" class="secondary" id="cancelEditDiplomaStudent">Hủy sửa</button>
+              </div>
+            </form>
+          </section>
+          <section class="panel">
+            <h3>Danh sách học viên</h3>
+            <div id="diplomaStudentList" class="list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="diploma-view-designer" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Mẫu văn bằng</h2>
+            <p>Chỉnh khổ giấy, ảnh nền, logo, khung viền và vị trí thông tin trên văn bằng.</p>
+          </div>
+          <div class="actions">
+            <button id="saveDiplomaTemplate" type="button">Lưu mẫu</button>
+          </div>
+        </div>
+        <div class="grid-2 diploma-designer-grid">
+          <section class="panel">
+            <h3>Khổ giấy và hình ảnh</h3>
+            <form id="diplomaTemplateForm" class="form-grid">
+              <label>
+                Khổ giấy
+                <select id="diplomaPaperSize">
+                  <option value="A4">A4</option>
+                  <option value="A5">A5</option>
+                  <option value="A3">A3</option>
+                  <option value="A0">A0</option>
+                  <option value="custom">Tùy chọn</option>
+                </select>
+              </label>
+              <label>Hướng giấy<select id="diplomaOrientation"><option value="landscape">Ngang</option><option value="portrait">Dọc</option></select></label>
+              <label>Rộng tùy chọn (cm)<input id="diplomaCustomWidth" type="number" min="1" step="0.1"></label>
+              <label>Cao tùy chọn (cm)<input id="diplomaCustomHeight" type="number" min="1" step="0.1"></label>
+              <label>Độ dày viền<input id="diplomaBorderWidth" type="number" min="0" max="20" step="1"></label>
+              <label>Màu viền<input id="diplomaBorderColor" type="color"></label>
+              <label class="full">Ảnh nền<input id="diplomaBgFile" type="file" accept="image/*"></label>
+              <label class="full">Logo<input id="diplomaLogoFile" type="file" accept="image/*"></label>
+            </form>
+          </section>
+
+          <section class="panel">
+            <h3>Vị trí và chữ</h3>
+            <div class="form-grid">
+              <label>
+                Thành phần
+                <select id="diplomaFieldTarget"></select>
+              </label>
+              <label>Nội dung mẫu<input id="diplomaFieldLabel"></label>
+              <label>Vị trí ngang (%)<input id="diplomaFieldX" type="number" min="0" max="100" step="0.5"></label>
+              <label>Vị trí dọc (%)<input id="diplomaFieldY" type="number" min="0" max="100" step="0.5"></label>
+              <label>Cỡ chữ<input id="diplomaFieldSize" type="number" min="6" max="96" step="1"></label>
+              <label>Khoảng cách chữ<input id="diplomaFieldSpacing" type="number" min="0" max="20" step="0.1"></label>
+              <label>Font chữ<select id="diplomaFieldFont"><option value="Times New Roman">Times New Roman</option><option value="Arial">Arial</option><option value="Calibri">Calibri</option><option value="Tahoma">Tahoma</option></select></label>
+              <label>Màu chữ<input id="diplomaFieldColor" type="color"></label>
+              <label class="check-label"><input id="diplomaFieldBold" type="checkbox"> In đậm</label>
+              <label class="check-label"><input id="diplomaFieldVisible" type="checkbox"> Hiển thị</label>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="diploma-view-preview" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>In văn bằng</h2>
+            <p>Xem trước mẫu văn bằng và in toàn bộ học viên.</p>
+          </div>
+          <div class="actions">
+            <button class="warning" id="printAllDiplomas" type="button">In tất cả văn bằng</button>
+          </div>
+        </div>
+        <section class="panel">
+          <h3>Bản xem trước</h3>
+          <div class="diploma-preview-wrap">
+            <div id="diplomaPreview" class="diploma-certificate"></div>
+          </div>
+        </section>
       </section>
     </main>
   </div>

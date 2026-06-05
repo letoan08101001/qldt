@@ -53,6 +53,43 @@
       templateVersion: 4
     };
 
+    const diplomaFields = [
+      ['title', 'Tiêu đề'],
+      ['fullName', 'Họ và tên'],
+      ['birthDate', 'Ngày sinh'],
+      ['rank', 'Cấp bậc'],
+      ['position', 'Chức vụ'],
+      ['unit', 'Đơn vị'],
+      ['startDate', 'Ngày nhập học'],
+      ['graduationDate', 'Ngày tốt nghiệp'],
+      ['diplomaType', 'Loại bằng'],
+      ['photo', 'Ảnh học viên']
+    ];
+
+    const defaultDiplomaTemplate = {
+      paperSize: 'A4',
+      orientation: 'landscape',
+      customWidth: 29.7,
+      customHeight: 21,
+      borderWidth: 4,
+      borderColor: '#0f7a66',
+      backgroundImage: '',
+      logoImage: '',
+      fields: {
+        title: { label: 'VĂN BẰNG', x: 50, y: 22, size: 30, font: 'Times New Roman', color: '#0f513f', bold: true, spacing: 2, visible: true },
+        fullName: { label: '{fullName}', x: 50, y: 42, size: 24, font: 'Times New Roman', color: '#111111', bold: true, spacing: 0, visible: true },
+        birthDate: { label: 'Ngày sinh: {birthDate}', x: 50, y: 50, size: 14, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        rank: { label: 'Cấp bậc: {rank}', x: 32, y: 58, size: 14, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        position: { label: 'Chức vụ: {position}', x: 68, y: 58, size: 14, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        unit: { label: 'Đơn vị: {unit}', x: 50, y: 66, size: 14, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        startDate: { label: 'Ngày nhập học: {startDate}', x: 32, y: 74, size: 13, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        graduationDate: { label: 'Ngày tốt nghiệp: {graduationDate}', x: 68, y: 74, size: 13, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true },
+        diplomaType: { label: 'Loại bằng: {diplomaType}', x: 50, y: 82, size: 15, font: 'Times New Roman', color: '#111111', bold: true, spacing: 0, visible: true },
+        photo: { label: '', x: 16, y: 28, size: 80, font: 'Times New Roman', color: '#111111', bold: false, spacing: 0, visible: true }
+      },
+      templateVersion: 1
+    };
+
     const sampleData = {
       categories: [
         { id: crypto.randomUUID(), name: 'Lý thuyết' },
@@ -65,7 +102,9 @@
       settings: { ...defaultSettings },
       accounts: structuredClone(defaultAccounts),
       currentExam: [],
-      savedExams: {}
+      savedExams: {},
+      diplomaStudents: [],
+      diplomaTemplate: structuredClone(defaultDiplomaTemplate)
     };
     sampleData.questions = [
       { id: crypto.randomUUID(), categoryId: sampleData.categories[0].id, text: 'Trình bày khái niệm và vai trò của nội dung đã học.', answer: '', points: 1 },
@@ -102,7 +141,9 @@
           settings,
           accounts: normalizeAccounts(parsed.accounts),
           currentExam: parsed.currentExam || [],
-          savedExams: normalizeSavedExams(parsed.savedExams)
+          savedExams: normalizeSavedExams(parsed.savedExams),
+          diplomaStudents: normalizeDiplomaStudents(parsed.diplomaStudents),
+          diplomaTemplate: normalizeDiplomaTemplate(parsed.diplomaTemplate)
         };
       } catch {
         return structuredClone(sampleData);
@@ -232,6 +273,41 @@
       ]));
     }
 
+    function normalizeDiplomaStudents(students = []) {
+      return Array.isArray(students) ? students.map((student) => ({
+        id: student.id || crypto.randomUUID(),
+        fullName: student.fullName || '',
+        birthDate: student.birthDate || '',
+        rank: student.rank || '',
+        position: student.position || '',
+        unit: student.unit || '',
+        startDate: student.startDate || '',
+        graduationDate: student.graduationDate || '',
+        diplomaType: student.diplomaType || '',
+        photo: student.photo || ''
+      })) : [];
+    }
+
+    function normalizeDiplomaTemplate(template = {}) {
+      const merged = {
+        ...structuredClone(defaultDiplomaTemplate),
+        ...(template || {}),
+        fields: {
+          ...structuredClone(defaultDiplomaTemplate.fields),
+          ...((template || {}).fields || {})
+        },
+        templateVersion: 1
+      };
+      diplomaFields.forEach(([key]) => {
+        merged.fields[key] = {
+          ...structuredClone(defaultDiplomaTemplate.fields[key]),
+          ...(merged.fields[key] || {}),
+          visible: merged.fields[key]?.visible !== false
+        };
+      });
+      return merged;
+    }
+
     function examNumberOptions(selected) {
       const total = Math.max(1, Number(state.settings?.totalExams || defaultSettings.totalExams));
       return Array.from({ length: total }, (_, index) => {
@@ -307,6 +383,7 @@
       renderSpecs();
       fillTemplateForm();
       renderExamPreview();
+      renderDiplomaAll();
       saveState();
     }
 
@@ -316,9 +393,11 @@
       $('loginScreen').classList.toggle('hidden', loggedIn);
       $('moduleScreen').classList.toggle('hidden', !loggedIn || Boolean(activeModule));
       document.querySelector('.app-shell').classList.toggle('hidden', !loggedIn || activeModule !== 'exam');
+      $('diplomaShell').classList.toggle('hidden', !loggedIn || activeModule !== 'diploma');
       if (!loggedIn) return;
       $('moduleUserName').textContent = user.fullName || user.username;
       $('currentUserName').textContent = user.fullName || user.username;
+      $('diplomaUserName').textContent = user.fullName || user.username;
       $('currentUserRole').textContent = user.role === 'admin' ? 'Quyền: Quản trị' : 'Quyền: Người dùng';
       document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !isAdmin()));
     }
@@ -848,6 +927,211 @@
       $('accountFormTitle').textContent = 'Thêm tài khoản';
     }
 
+    function formatDisplayDate(value) {
+      if (!value) return '';
+      const [year, month, day] = String(value).split('-');
+      return year && month && day ? `${day}/${month}/${year}` : value;
+    }
+
+    function diplomaPaperSize(template = state.diplomaTemplate) {
+      const sizes = {
+        A0: [84.1, 118.9],
+        A3: [29.7, 42],
+        A4: [21, 29.7],
+        A5: [14.8, 21]
+      };
+      let [width, height] = template.paperSize === 'custom'
+        ? [Number(template.customWidth || 29.7), Number(template.customHeight || 21)]
+        : sizes[template.paperSize] || sizes.A4;
+      if (template.orientation === 'landscape' && width < height) [width, height] = [height, width];
+      if (template.orientation === 'portrait' && width > height) [width, height] = [height, width];
+      return { width, height };
+    }
+
+    function diplomaStudentValue(student, key) {
+      if (key === 'birthDate' || key === 'startDate' || key === 'graduationDate') return formatDisplayDate(student?.[key]);
+      return student?.[key] || '';
+    }
+
+    function renderDiplomaText(text, student) {
+      return escapeHtml(String(text || '').replace(/\{(\w+)\}/g, (_, key) => diplomaStudentValue(student || {}, key)));
+    }
+
+    function renderDiplomaCertificate(student = state.diplomaStudents[0] || {}, elementId = '') {
+      const template = normalizeDiplomaTemplate(state.diplomaTemplate);
+      const paper = diplomaPaperSize(template);
+      const fields = diplomaFields.map(([key]) => {
+        const field = template.fields[key];
+        if (!field?.visible) return '';
+        if (key === 'photo') {
+          return student.photo ? `<img class="diploma-student-photo" src="${student.photo}" alt="" style="left:${field.x}%; top:${field.y}%; width:${field.size}px;">` : '';
+        }
+        return `<div class="diploma-field" style="left:${field.x}%; top:${field.y}%; font-family:'${field.font}', serif; font-size:${field.size}pt; color:${field.color}; font-weight:${field.bold ? 700 : 400}; letter-spacing:${Number(field.spacing || 0)}px;">${renderDiplomaText(field.label, student)}</div>`;
+      }).join('');
+      return `
+        <div ${elementId ? `id="${elementId}"` : ''} class="diploma-certificate" style="--paper-width:${paper.width}cm; --paper-height:${paper.height}cm; --border-width:${Number(template.borderWidth || 0)}px; --border-color:${escapeHtml(template.borderColor || '#0f7a66')}">
+          ${template.backgroundImage ? `<img class="diploma-bg" src="${template.backgroundImage}" alt="">` : ''}
+          ${template.logoImage ? `<img class="diploma-logo" src="${template.logoImage}" alt="">` : ''}
+          ${fields}
+        </div>
+      `;
+    }
+
+    function renderDiplomaStudents() {
+      $('diplomaStudentList').innerHTML = state.diplomaStudents.map((student) => `
+        <div class="row-item">
+          <div class="row-title">
+            <strong>${escapeHtml(student.fullName || 'Chưa có tên')}</strong>
+            <span class="actions">
+              <button class="secondary icon" title="Sửa" onclick="editDiplomaStudent('${student.id}')">✎</button>
+              <button class="danger icon" title="Xóa" onclick="deleteDiplomaStudent('${student.id}')">×</button>
+            </span>
+          </div>
+          <div class="meta">
+            <span class="pill">${escapeHtml(student.rank || 'Chưa cấp bậc')}</span>
+            <span class="pill">${escapeHtml(student.diplomaType || 'Chưa loại bằng')}</span>
+            <span class="pill">TN: ${escapeHtml(formatDisplayDate(student.graduationDate) || 'Chưa có')}</span>
+          </div>
+          <div class="meta">${escapeHtml([student.position, student.unit].filter(Boolean).join(' - ') || 'Chưa cập nhật đơn vị')}</div>
+        </div>
+      `).join('') || '<div class="empty">Chưa có học viên.</div>';
+    }
+
+    function clearDiplomaStudentForm() {
+      ['diplomaStudentId', 'diplomaFullName', 'diplomaBirthDate', 'diplomaRank', 'diplomaPosition', 'diplomaUnit', 'diplomaStartDate', 'diplomaGraduationDate', 'diplomaType', 'diplomaPhotoData', 'diplomaPhotoFile'].forEach((id) => { $(id).value = ''; });
+      $('diplomaStudentFormTitle').textContent = 'Thêm học viên';
+    }
+
+    window.editDiplomaStudent = (id) => {
+      const student = state.diplomaStudents.find((item) => item.id === id);
+      if (!student) return;
+      $('diplomaStudentId').value = student.id;
+      $('diplomaFullName').value = student.fullName;
+      $('diplomaBirthDate').value = student.birthDate;
+      $('diplomaRank').value = student.rank;
+      $('diplomaPosition').value = student.position;
+      $('diplomaUnit').value = student.unit;
+      $('diplomaStartDate').value = student.startDate;
+      $('diplomaGraduationDate').value = student.graduationDate;
+      $('diplomaType').value = student.diplomaType;
+      $('diplomaPhotoData').value = student.photo || '';
+      $('diplomaStudentFormTitle').textContent = 'Sửa học viên';
+    };
+
+    window.deleteDiplomaStudent = (id) => {
+      if (!confirm('Xóa học viên này?')) return;
+      state.diplomaStudents = state.diplomaStudents.filter((student) => student.id !== id);
+      renderDiplomaAll();
+      saveState();
+    };
+
+    function fillDiplomaTemplateForm() {
+      const template = normalizeDiplomaTemplate(state.diplomaTemplate);
+      $('diplomaPaperSize').value = template.paperSize;
+      $('diplomaOrientation').value = template.orientation;
+      $('diplomaCustomWidth').value = template.customWidth;
+      $('diplomaCustomHeight').value = template.customHeight;
+      $('diplomaBorderWidth').value = template.borderWidth;
+      $('diplomaBorderColor').value = template.borderColor;
+      $('diplomaFieldTarget').innerHTML = diplomaFields.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+      fillDiplomaFieldControls();
+    }
+
+    function readDiplomaTemplateForm() {
+      state.diplomaTemplate = normalizeDiplomaTemplate({
+        ...state.diplomaTemplate,
+        paperSize: $('diplomaPaperSize').value,
+        orientation: $('diplomaOrientation').value,
+        customWidth: Math.max(1, Number($('diplomaCustomWidth').value || 29.7)),
+        customHeight: Math.max(1, Number($('diplomaCustomHeight').value || 21)),
+        borderWidth: Math.max(0, Number($('diplomaBorderWidth').value || 0)),
+        borderColor: $('diplomaBorderColor').value
+      });
+    }
+
+    function fillDiplomaFieldControls() {
+      const key = $('diplomaFieldTarget').value || 'title';
+      const field = normalizeDiplomaTemplate(state.diplomaTemplate).fields[key];
+      $('diplomaFieldSize').max = key === 'photo' ? 500 : 96;
+      $('diplomaFieldLabel').value = field.label;
+      $('diplomaFieldX').value = field.x;
+      $('diplomaFieldY').value = field.y;
+      $('diplomaFieldSize').value = field.size;
+      $('diplomaFieldSpacing').value = field.spacing;
+      $('diplomaFieldFont').value = field.font;
+      $('diplomaFieldColor').value = field.color;
+      $('diplomaFieldBold').checked = Boolean(field.bold);
+      $('diplomaFieldVisible').checked = field.visible !== false;
+    }
+
+    function readDiplomaFieldControls() {
+      const key = $('diplomaFieldTarget').value || 'title';
+      readDiplomaTemplateForm();
+      state.diplomaTemplate.fields[key] = {
+        ...state.diplomaTemplate.fields[key],
+        label: $('diplomaFieldLabel').value,
+        x: Math.min(100, Math.max(0, Number($('diplomaFieldX').value || 0))),
+        y: Math.min(100, Math.max(0, Number($('diplomaFieldY').value || 0))),
+        size: Math.max(6, Math.min(key === 'photo' ? 500 : 96, Number($('diplomaFieldSize').value || 14))),
+        spacing: Math.max(0, Math.min(20, Number($('diplomaFieldSpacing').value || 0))),
+        font: $('diplomaFieldFont').value,
+        color: $('diplomaFieldColor').value,
+        bold: $('diplomaFieldBold').checked,
+        visible: $('diplomaFieldVisible').checked
+      };
+      renderDiplomaPreview();
+    }
+
+    function renderDiplomaPreview() {
+      $('diplomaPreview').outerHTML = renderDiplomaCertificate(state.diplomaStudents[0] || {}, 'diplomaPreview');
+    }
+
+    function renderDiplomaAll() {
+      state.diplomaStudents = normalizeDiplomaStudents(state.diplomaStudents);
+      state.diplomaTemplate = normalizeDiplomaTemplate(state.diplomaTemplate);
+      renderDiplomaStudents();
+      fillDiplomaTemplateForm();
+      renderDiplomaPreview();
+    }
+
+    function switchDiplomaView(view) {
+      document.querySelectorAll('[data-diploma-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.diplomaView === view));
+      document.querySelectorAll('[id^="diploma-view-"]').forEach((section) => section.classList.add('hidden'));
+      $(`diploma-view-${view}`).classList.remove('hidden');
+      renderDiplomaPreview();
+    }
+
+    function readImageFile(input, callback) {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => callback(reader.result);
+      reader.readAsDataURL(file);
+    }
+
+    function printAllDiplomas() {
+      if (!state.diplomaStudents.length) return alert('Chưa có học viên để in.');
+      const paper = diplomaPaperSize(state.diplomaTemplate);
+      const pages = state.diplomaStudents.map((student) => `<div class="diploma-print-page">${renderDiplomaCertificate(student)}</div>`).join('');
+      const popup = window.open('', '_blank');
+      if (!popup) return alert('Trình duyệt đang chặn cửa sổ in.');
+      popup.document.write(`
+        <html><head><meta charset="utf-8"><title>In văn bằng</title>
+        <style>
+          @page { size: ${paper.width}cm ${paper.height}cm; margin: 0; }
+          body { margin: 0; font-family: "Times New Roman", serif; background: #fff; }
+          .diploma-print-page { width: ${paper.width}cm; height: ${paper.height}cm; page-break-after: always; display: grid; place-items: center; }
+          .diploma-print-page:last-child { page-break-after: auto; }
+          .diploma-certificate { position: relative; width: var(--paper-width); height: var(--paper-height); border: var(--border-width) solid var(--border-color); overflow: hidden; box-sizing: border-box; }
+          .diploma-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .9; }
+          .diploma-logo { position: absolute; left: 50%; top: 8%; width: 10%; transform: translate(-50%, -50%); object-fit: contain; }
+          .diploma-student-photo { position: absolute; transform: translate(-50%, -50%); aspect-ratio: 3 / 4; object-fit: cover; border: 1px solid rgba(0,0,0,.35); background: #fff; }
+          .diploma-field { position: absolute; transform: translate(-50%, -50%); white-space: pre-wrap; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
+        </style></head><body>${pages}<script>window.onload=()=>{window.print();};<\/script></body></html>
+      `);
+      popup.document.close();
+    }
+
     window.editAccount = (id) => {
       if (!requireAdmin()) return;
       const account = state.accounts.find((item) => item.id === id);
@@ -875,7 +1159,7 @@
 
     function switchView(view) {
       if (view === 'accounts' && !isAdmin()) view = 'dashboard';
-      document.querySelectorAll('.nav button').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
+      document.querySelectorAll('.nav button[data-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
       document.querySelectorAll('main > section').forEach((section) => section.classList.add('hidden'));
       $(`view-${view}`).classList.remove('hidden');
       renderExamPreview();
@@ -902,7 +1186,7 @@
       renderExamPreview();
     }
 
-    document.querySelectorAll('.nav button').forEach((button) => {
+    document.querySelectorAll('.nav button[data-view]').forEach((button) => {
       button.addEventListener('click', () => {
         switchView(button.dataset.view);
       });
@@ -954,13 +1238,85 @@
     });
 
     $('openDiplomaManager').addEventListener('click', () => {
-      alert('Chức năng Quản lý văn bằng sẽ được bổ sung sau.');
+      activeModule = 'diploma';
+      renderAuthState();
+      switchDiplomaView('students');
     });
 
     $('backToModules').addEventListener('click', () => {
       activeModule = null;
       renderAuthState();
     });
+
+    $('backToModulesFromDiploma').addEventListener('click', () => {
+      activeModule = null;
+      renderAuthState();
+    });
+
+    $('diplomaLogoutBtn').addEventListener('click', () => {
+      sessionUserId = null;
+      activeModule = null;
+      renderAuthState();
+    });
+
+    document.querySelectorAll('[data-diploma-view]').forEach((button) => {
+      button.addEventListener('click', () => switchDiplomaView(button.dataset.diplomaView));
+    });
+
+    $('diplomaStudentForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const payload = {
+        id: $('diplomaStudentId').value || crypto.randomUUID(),
+        fullName: $('diplomaFullName').value.trim(),
+        birthDate: $('diplomaBirthDate').value,
+        rank: $('diplomaRank').value.trim(),
+        position: $('diplomaPosition').value.trim(),
+        unit: $('diplomaUnit').value.trim(),
+        startDate: $('diplomaStartDate').value,
+        graduationDate: $('diplomaGraduationDate').value,
+        diplomaType: $('diplomaType').value.trim(),
+        photo: $('diplomaPhotoData').value
+      };
+      if (!payload.fullName) return;
+      const index = state.diplomaStudents.findIndex((student) => student.id === payload.id);
+      if (index >= 0) state.diplomaStudents[index] = payload;
+      else state.diplomaStudents.push(payload);
+      clearDiplomaStudentForm();
+      renderDiplomaAll();
+      saveState();
+    });
+    $('clearDiplomaStudentForm').addEventListener('click', clearDiplomaStudentForm);
+    $('cancelEditDiplomaStudent').addEventListener('click', clearDiplomaStudentForm);
+    $('diplomaPhotoFile').addEventListener('change', (event) => readImageFile(event.target, (dataUrl) => {
+      $('diplomaPhotoData').value = dataUrl;
+    }));
+
+    $('saveDiplomaTemplate').addEventListener('click', () => {
+      readDiplomaFieldControls();
+      saveState();
+      alert('Đã lưu mẫu văn bằng.');
+    });
+
+    ['diplomaPaperSize', 'diplomaOrientation', 'diplomaCustomWidth', 'diplomaCustomHeight', 'diplomaBorderWidth', 'diplomaBorderColor'].forEach((id) => {
+      $(id).addEventListener('input', () => { readDiplomaTemplateForm(); renderDiplomaPreview(); });
+      $(id).addEventListener('change', () => { readDiplomaTemplateForm(); renderDiplomaPreview(); });
+    });
+    $('diplomaFieldTarget').addEventListener('change', fillDiplomaFieldControls);
+    ['diplomaFieldLabel', 'diplomaFieldX', 'diplomaFieldY', 'diplomaFieldSize', 'diplomaFieldSpacing', 'diplomaFieldFont', 'diplomaFieldColor', 'diplomaFieldBold', 'diplomaFieldVisible'].forEach((id) => {
+      $(id).addEventListener('input', readDiplomaFieldControls);
+      $(id).addEventListener('change', readDiplomaFieldControls);
+    });
+    $('diplomaBgFile').addEventListener('change', (event) => readImageFile(event.target, (dataUrl) => {
+      state.diplomaTemplate.backgroundImage = dataUrl;
+      renderDiplomaPreview();
+      saveState();
+    }));
+    $('diplomaLogoFile').addEventListener('change', (event) => readImageFile(event.target, (dataUrl) => {
+      state.diplomaTemplate.logoImage = dataUrl;
+      renderDiplomaPreview();
+      saveState();
+    }));
+    $('printAllDiplomas').addEventListener('click', printAllDiplomas);
 
     $('questionForm').addEventListener('submit', (event) => {
       event.preventDefault();
@@ -1068,7 +1424,9 @@
             settings: normalizeSettings(imported.settings),
             accounts: normalizeAccounts(imported.accounts),
             currentExam: imported.currentExam || [],
-            savedExams: normalizeSavedExams(imported.savedExams)
+            savedExams: normalizeSavedExams(imported.savedExams),
+            diplomaStudents: normalizeDiplomaStudents(imported.diplomaStudents),
+            diplomaTemplate: normalizeDiplomaTemplate(imported.diplomaTemplate)
           };
           renderAll();
           alert('Đã khôi phục dữ liệu.');

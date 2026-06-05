@@ -20,5 +20,17 @@
       "unit": "Ban quan tri"
     }
   ],
-  "savedExams": {}
+  "savedExams": {},
+  "diplomaStudents": [],
+  "diplomaTemplate": {
+    "paperSize": "A4",
+    "orientation": "landscape",
+    "customWidth": 29.7,
+    "customHeight": 21,
+    "borderWidth": 4,
+    "borderColor": "#0f7a66",
+    "backgroundImage": "",
+    "logoImage": "",
+    "fields": {}
+  }
 }
