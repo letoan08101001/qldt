@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Quản lý đề thi</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <section id="loginScreen" class="login-screen">
     <div class="login-card">
+      <img class="app-logo login-logo" src="assets/logo.svg" alt="Logo Quản lý đề thi">
       <h1>Hệ thống quản lý</h1>
       <p>Đăng nhập để chọn chức năng làm việc.</p>
       <form id="loginForm" class="login-form">
@@ -29,9 +31,12 @@
   <section id="moduleScreen" class="module-screen hidden">
     <div class="module-shell">
       <div class="module-head">
-        <div>
-          <h1>Chọn chức năng</h1>
-          <p>Chọn khu vực quản lý để bắt đầu làm việc.</p>
+        <div class="module-heading">
+          <img class="module-logo" src="assets/logo.svg" alt="Logo Quản lý đề thi">
+          <div>
+            <h1>Chọn chức năng</h1>
+            <p>Chọn khu vực quản lý để bắt đầu làm việc.</p>
+          </div>
         </div>
         <div class="module-user">
           <div>Đang đăng nhập: <strong id="moduleUserName"></strong></div>
@@ -41,14 +46,25 @@
 
       <div class="module-grid">
         <button class="module-card" id="openExamManager" type="button">
-          <span class="module-icon">☰</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 3h9l4 4v17H7z"/><path d="M16 3v5h5"/><path d="M4 7h3v17H4z"/><path d="M10 12h7M10 16h7M10 20h4"/></svg>
+          </span>
           <strong>Quản lý đề thi</strong>
           <small>Ngân hàng câu hỏi, tạo đề, xuất Word và in đề thi.</small>
         </button>
         <button class="module-card" id="openDiplomaManager" type="button">
-          <span class="module-icon">▣</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 5h16v10H4z"/><path d="M7 9h10M8 13h8"/><path d="M8 15v6l4-2 4 2v-6"/></svg>
+          </span>
           <strong>Quản lý văn bằng</strong>
           <small>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</small>
+        </button>
+        <button class="module-card" id="openAccountManager" type="button" data-admin-only>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M4 22a8 8 0 0 1 16 0"/><path d="M18 6h4M20 4v4"/></svg>
+          </span>
+          <strong>Quản lý tài khoản</strong>
+          <small>Tạo tài khoản, phân quyền và cập nhật thông tin cán bộ sử dụng.</small>
         </button>
       </div>
     </div>
@@ -82,7 +98,10 @@
   <div class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
-        <h1>Quản lý đề thi</h1>
+        <div class="brand-title">
+          <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý đề thi">
+          <h1>Quản lý đề thi</h1>
+        </div>
         <p>Ngân hàng câu hỏi, trộn đề theo mục, xuất Word và in trực tiếp.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng">
@@ -92,7 +111,6 @@
         <button data-view="generator">⚙ Tạo đề</button>
         <button data-view="template">✎ Form đề thi</button>
         <button data-view="answer-template">☑ Form đáp án</button>
-        <button data-view="accounts" data-admin-only>♙ Tài khoản</button>
         <button data-view="data">⇅ Dữ liệu</button>
       </nav>
       <div class="user-box">
@@ -491,7 +509,29 @@
         </section>
       </section>
 
-      <section id="view-accounts" class="hidden">
+    </main>
+  </div>
+
+  <div id="accountShell" class="account-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">
+          <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý tài khoản">
+          <h1>Quản lý tài khoản</h1>
+        </div>
+        <p>Tạo tài khoản, phân quyền và cập nhật thông tin cán bộ sử dụng.</p>
+      </div>
+      <nav class="nav" aria-label="Điều hướng tài khoản">
+        <button class="secondary" id="backToModulesFromAccounts" type="button">← Chọn chức năng</button>
+      </nav>
+      <div class="user-box">
+        <div>Đang đăng nhập: <strong id="accountUserName"></strong></div>
+        <button class="secondary" id="accountLogoutBtn" type="button">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="account-view">
         <div class="topbar">
           <div>
             <h2>Quản lý tài khoản</h2>
@@ -559,7 +599,10 @@
   <div id="diplomaShell" class="diploma-shell hidden">
     <aside class="sidebar">
       <div class="brand">
-        <h1>Quản lý văn bằng</h1>
+        <div class="brand-title">
+          <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý văn bằng">
+          <h1>Quản lý văn bằng</h1>
+        </div>
         <p>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng văn bằng">
@@ -690,6 +733,7 @@
 
   <script src="js/storage.js"></script>
   <script src="js/app.js"></script>
+  <div class="copyright-footer">Bản quyền bởi Lê Mạnh Toàn · SĐT: 0888288260</div>
 </body>
 </html>
 

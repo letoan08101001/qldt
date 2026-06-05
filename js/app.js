@@ -1,7 +1,5 @@
 ﻿const dataStore = window.ExamStorage;
     const trialDurationMs = 5 * 24 * 60 * 60 * 1000;
-    const trialStartKey = 'exam_manager_trial_start';
-    const trialEndKey = 'exam_manager_trial_end';
     let trialTimer = null;
     let sessionUserId = null;
     let activeModule = null;
@@ -123,6 +121,7 @@
       accounts: structuredClone(defaultAccounts),
       currentExam: [],
       savedExams: {},
+      trial: null,
       answerTemplate: structuredClone(defaultAnswerTemplate),
       diplomaStudents: [],
       diplomaTemplate: structuredClone(defaultDiplomaTemplate)
@@ -179,6 +178,7 @@
           accounts: normalizeAccounts(parsed.accounts),
           currentExam: parsed.currentExam || [],
           savedExams: normalizeSavedExams(parsed.savedExams),
+          trial: normalizeTrial(parsed.trial),
           answerTemplate: normalizeAnswerTemplate(parsed.answerTemplate),
           diplomaStudents: normalizeDiplomaStudents(parsed.diplomaStudents),
           diplomaTemplate: normalizeDiplomaTemplate(parsed.diplomaTemplate)
@@ -260,6 +260,14 @@
       }));
     }
 
+    function normalizeTrial(trial = null) {
+      if (!trial) return null;
+      const start = Number(trial.start || 0);
+      const end = Number(trial.end || 0);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0 || end <= 0) return null;
+      return { start, end };
+    }
+
     function currentUser() {
       return state.accounts.find((account) => account.id === sessionUserId) || null;
     }
@@ -275,12 +283,12 @@
     }
 
     function getTrialEndTime() {
-      const existingEnd = Number(dataStore.getItem(trialEndKey));
-      if (Number.isFinite(existingEnd) && existingEnd > 0) return existingEnd;
+      state.trial = normalizeTrial(state.trial);
+      if (state.trial?.end) return state.trial.end;
       const start = Date.now();
       const end = start + trialDurationMs;
-      dataStore.setItem(trialStartKey, String(start));
-      dataStore.setItem(trialEndKey, String(end));
+      state.trial = { start, end };
+      saveState();
       return end;
     }
 
@@ -302,6 +310,8 @@
       $('trialOkBtn').classList.add('hidden');
       $('loginScreen').classList.add('hidden');
       document.querySelector('.app-shell').classList.add('hidden');
+      $('diplomaShell').classList.add('hidden');
+      $('accountShell').classList.add('hidden');
     }
 
     function updateTrialPopup() {
@@ -536,10 +546,12 @@
       $('moduleScreen').classList.toggle('hidden', !loggedIn || Boolean(activeModule));
       document.querySelector('.app-shell').classList.toggle('hidden', !loggedIn || activeModule !== 'exam');
       $('diplomaShell').classList.toggle('hidden', !loggedIn || activeModule !== 'diploma');
+      $('accountShell').classList.toggle('hidden', !loggedIn || activeModule !== 'accounts');
       if (!loggedIn) return;
       $('moduleUserName').textContent = user.fullName || user.username;
       $('currentUserName').textContent = user.fullName || user.username;
       $('diplomaUserName').textContent = user.fullName || user.username;
+      $('accountUserName').textContent = user.fullName || user.username;
       $('currentUserRole').textContent = user.role === 'admin' ? 'Quyền: Quản trị' : 'Quyền: Người dùng';
       document.querySelectorAll('[data-admin-only]').forEach((el) => el.classList.toggle('hidden', !isAdmin()));
     }
@@ -1518,13 +1530,12 @@
     }
 
     function switchView(view) {
-      if (view === 'accounts' && !isAdmin()) view = 'dashboard';
       if (view === 'questions') questionBankSetSelected = false;
-      const current = document.querySelector('main > section:not(.hidden)');
+      const current = document.querySelector('.app-shell main > section:not(.hidden)');
       if (current) current.classList.add('view-leaving');
       animateContentSwitch();
       document.querySelectorAll('.nav button[data-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
-      document.querySelectorAll('main > section').forEach((section) => section.classList.add('hidden'));
+      document.querySelectorAll('.app-shell main > section').forEach((section) => section.classList.add('hidden'));
       $(`view-${view}`).classList.remove('hidden');
       $(`view-${view}`).classList.remove('view-leaving');
       renderQuestionExamSetButtons();
@@ -1687,6 +1698,14 @@
       switchDiplomaView('students');
     });
 
+    $('openAccountManager').addEventListener('click', () => {
+      if (!requireAdmin()) return;
+      activeModule = 'accounts';
+      renderAuthState();
+      $('account-view').classList.remove('hidden');
+      renderAccounts();
+    });
+
     $('backToModules').addEventListener('click', () => {
       activeModule = null;
       renderAuthState();
@@ -1697,7 +1716,19 @@
       renderAuthState();
     });
 
+    $('backToModulesFromAccounts').addEventListener('click', () => {
+      activeModule = null;
+      clearAccountForm();
+      renderAuthState();
+    });
+
     $('diplomaLogoutBtn').addEventListener('click', () => {
+      sessionUserId = null;
+      activeModule = null;
+      renderAuthState();
+    });
+
+    $('accountLogoutBtn').addEventListener('click', () => {
       sessionUserId = null;
       activeModule = null;
       renderAuthState();
@@ -1897,6 +1928,7 @@
             accounts: normalizeAccounts(imported.accounts),
             currentExam: imported.currentExam || [],
             savedExams: normalizeSavedExams(imported.savedExams),
+            trial: normalizeTrial(imported.trial),
             answerTemplate: normalizeAnswerTemplate(imported.answerTemplate),
             diplomaStudents: normalizeDiplomaStudents(imported.diplomaStudents),
             diplomaTemplate: normalizeDiplomaTemplate(imported.diplomaTemplate)
