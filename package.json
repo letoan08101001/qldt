@@ -1,0 +1,12 @@
+{
+  "name": "qldt-dynamic-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ung dung quan ly de thi va van bang chay dong voi Node.js.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
