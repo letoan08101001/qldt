@@ -1,6 +1,7 @@
 window.ExamStorage = (() => {
   const key = 'exam_manager_v1';
   const serverMode = location.protocol === 'http:' || location.protocol === 'https:';
+  let apiAvailable = serverMode;
 
   function request(method, path, body) {
     const xhr = new XMLHttpRequest();
@@ -13,26 +14,48 @@ window.ExamStorage = (() => {
     return xhr.responseText;
   }
 
+  function useLocalStorage(method, data) {
+    if (method === 'load') return localStorage.getItem(key);
+    if (method === 'save') localStorage.setItem(key, JSON.stringify(data));
+    if (method === 'clear') localStorage.removeItem(key);
+    return null;
+  }
+
   function load() {
-    if (!serverMode) return localStorage.getItem(key);
-    const raw = request('GET', '/api/data');
-    return raw && raw !== 'null' ? raw : null;
+    if (!apiAvailable) return useLocalStorage('load');
+    try {
+      const raw = request('GET', '/api/data');
+      return raw && raw !== 'null' ? raw : useLocalStorage('load');
+    } catch {
+      apiAvailable = false;
+      return useLocalStorage('load');
+    }
   }
 
   function save(data) {
-    if (!serverMode) {
-      localStorage.setItem(key, JSON.stringify(data));
+    if (!apiAvailable) {
+      useLocalStorage('save', data);
       return;
     }
-    request('PUT', '/api/data', data);
+    try {
+      request('PUT', '/api/data', data);
+    } catch {
+      apiAvailable = false;
+      useLocalStorage('save', data);
+    }
   }
 
   function clear() {
-    if (!serverMode) {
-      localStorage.removeItem(key);
+    if (!apiAvailable) {
+      useLocalStorage('clear');
       return;
     }
-    request('DELETE', '/api/data');
+    try {
+      request('DELETE', '/api/data');
+    } catch {
+      apiAvailable = false;
+      useLocalStorage('clear');
+    }
   }
 
   function getItem(name) {

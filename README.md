@@ -53,3 +53,17 @@ Tai khoan mac dinh:
 - `DELETE /api/data`: xoa du lieu tren server va quay ve du lieu mau khi tai lai ung dung.
 
 Du lieu trial van luu tren trinh duyet theo may nguoi dung.
+
+## Deploy Vercel
+
+Vercel khong chay `server.js` dang long-running server. Du an da co `vercel.json` de route trang ve `index.html` va `api/data.js` de tranh loi `/api/data`.
+
+Thiet lap tren Vercel:
+
+- Framework Preset: `Other`
+- Build Command: de trong
+- Output Directory: de trong
+- Install Command: de trong hoac `npm install`
+- Root Directory: thu muc goc chua `index.html`
+
+Neu muon du lieu dung chung va khong mat sau khi serverless ngu nguoi, can gan database ben ngoai nhu Vercel KV, Supabase hoac MongoDB. Ban hien tai co fallback ve `localStorage` de moi may van dung rieng duoc.
