@@ -1,9 +1,19 @@
 window.ExamStorage = (() => {
-  const key = 'exam_manager_v1';
   const serverMode = location.protocol === 'http:' || location.protocol === 'https:';
-  let apiAvailable = serverMode;
+  let warned = false;
+
+  function showStorageWarning(message) {
+    if (warned) return;
+    warned = true;
+    setTimeout(() => {
+      alert(`${message}\n\nDữ liệu chung chỉ hoạt động khi chạy qua server/API.`);
+    }, 0);
+  }
 
   function request(method, path, body) {
+    if (!serverMode) {
+      throw new Error('Ứng dụng đang mở trực tiếp bằng file, không có server dữ liệu chung.');
+    }
     const xhr = new XMLHttpRequest();
     xhr.open(method, path, false);
     if (body !== undefined) xhr.setRequestHeader('Content-Type', 'application/json;charset=utf-8');
@@ -14,57 +24,37 @@ window.ExamStorage = (() => {
     return xhr.responseText;
   }
 
-  function useLocalStorage(method, data) {
-    if (method === 'load') return localStorage.getItem(key);
-    if (method === 'save') localStorage.setItem(key, JSON.stringify(data));
-    if (method === 'clear') localStorage.removeItem(key);
-    return null;
-  }
-
   function load() {
-    if (!apiAvailable) return useLocalStorage('load');
     try {
       const raw = request('GET', '/api/data');
-      return raw && raw !== 'null' ? raw : useLocalStorage('load');
-    } catch {
-      apiAvailable = false;
-      return useLocalStorage('load');
+      return raw && raw !== 'null' ? raw : null;
+    } catch (error) {
+      showStorageWarning(error.message);
+      return null;
     }
   }
 
   function save(data) {
-    if (!apiAvailable) {
-      useLocalStorage('save', data);
-      return;
-    }
     try {
       request('PUT', '/api/data', data);
-    } catch {
-      apiAvailable = false;
-      useLocalStorage('save', data);
+    } catch (error) {
+      showStorageWarning(error.message);
     }
   }
 
   function clear() {
-    if (!apiAvailable) {
-      useLocalStorage('clear');
-      return;
-    }
     try {
       request('DELETE', '/api/data');
-    } catch {
-      apiAvailable = false;
-      useLocalStorage('clear');
+    } catch (error) {
+      showStorageWarning(error.message);
     }
   }
 
-  function getItem(name) {
-    return localStorage.getItem(name);
+  function getItem() {
+    return null;
   }
 
-  function setItem(name, value) {
-    localStorage.setItem(name, value);
-  }
+  function setItem() {}
 
-  return { key, load, save, clear, getItem, setItem };
+  return { load, save, clear, getItem, setItem };
 })();
