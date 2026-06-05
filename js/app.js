@@ -5,6 +5,7 @@
     let trialTimer = null;
     let sessionUserId = null;
     let activeModule = null;
+    let questionBankSetSelected = false;
     const defaultSettings = {
       totalExams: 10,
       selectedExamNo: 1,
@@ -51,6 +52,23 @@
       examGapLines: 10,
       textStyles: structuredClone(defaultTextStyles),
       templateVersion: 4
+    };
+
+    const defaultAnswerTextStyles = {
+      headerLeft: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      headerRight: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      title: { font: 'Times New Roman', size: 14, bold: true, align: 'center' },
+      question: { font: 'Times New Roman', size: 14, bold: false, align: 'left' }
+    };
+
+    const defaultAnswerTemplate = {
+      leftHeader: 'TRƯỜNG TCKT CÔNG BINH\nHỘI ĐỒNG THI CẤP CHỨNG CHỈ\nRÀ PHÁ BOM MÌN, VẬT NỔ\n---------\nNăm 2026',
+      rightHeader: 'ĐỀ THI CẤP CHỨNG CHỈ RPBN, VN\nMÔN THI: THỰC HÀNH TỔNG HỢP\nĐỐI TƯỢNG: KỸ THUẬT VIÊN RPBM, VN',
+      title: 'ĐỀ THI SỐ',
+      numberStyle: 'Câu',
+      examGapLines: 2,
+      textStyles: structuredClone(defaultAnswerTextStyles),
+      templateVersion: 1
     };
 
     const diplomaFields = [
@@ -100,9 +118,12 @@
       specs: [],
       template: { ...defaultTemplate },
       settings: { ...defaultSettings },
+      activeExamSetId: 'default-set',
+      examSets: [],
       accounts: structuredClone(defaultAccounts),
       currentExam: [],
       savedExams: {},
+      answerTemplate: structuredClone(defaultAnswerTemplate),
       diplomaStudents: [],
       diplomaTemplate: structuredClone(defaultDiplomaTemplate)
     };
@@ -117,6 +138,16 @@
       { categoryId: sampleData.categories[0].id, count: 1 },
       { categoryId: sampleData.categories[1].id, count: 1 }
     ];
+    sampleData.examSets = [
+      {
+        id: 'default-set',
+        name: 'Bộ đề mặc định',
+        specs: structuredClone(sampleData.specs),
+        settings: structuredClone(sampleData.settings),
+        currentExam: [],
+        savedExams: {}
+      }
+    ];
 
     let state = loadState();
 
@@ -128,33 +159,90 @@
 
     function loadState() {
       const raw = dataStore.load();
-      if (!raw) return structuredClone(sampleData);
+      if (!raw) {
+        const fresh = structuredClone(sampleData);
+        applyActiveExamSetToState(fresh);
+        return fresh;
+      }
       try {
         const parsed = JSON.parse(raw);
         const template = normalizeTemplate(parsed.template);
         const settings = normalizeSettings(parsed.settings);
-        return {
-          categories: parsed.categories?.length ? parsed.categories : structuredClone(sampleData.categories),
+        const loaded = {
+          categories: normalizeCategories(parsed.categories?.length ? parsed.categories : structuredClone(sampleData.categories)),
           questions: normalizeQuestions(parsed.questions || []),
           specs: parsed.specs || [],
           template,
           settings,
+          activeExamSetId: parsed.activeExamSetId || parsed.examSets?.[0]?.id || 'default-set',
+          examSets: normalizeExamSets(parsed.examSets, parsed),
           accounts: normalizeAccounts(parsed.accounts),
           currentExam: parsed.currentExam || [],
           savedExams: normalizeSavedExams(parsed.savedExams),
+          answerTemplate: normalizeAnswerTemplate(parsed.answerTemplate),
           diplomaStudents: normalizeDiplomaStudents(parsed.diplomaStudents),
           diplomaTemplate: normalizeDiplomaTemplate(parsed.diplomaTemplate)
         };
+        applyActiveExamSetToState(loaded);
+        return loaded;
       } catch {
-        return structuredClone(sampleData);
+        const fallback = structuredClone(sampleData);
+        applyActiveExamSetToState(fallback);
+        return fallback;
       }
     }
 
     function saveState() {
+      syncActiveExamSetFromState();
       const currentUserId = state.settings.currentUserId;
       state.settings.currentUserId = null;
       dataStore.save(state);
       state.settings.currentUserId = currentUserId;
+    }
+
+    function normalizeExamSets(examSets = [], legacy = {}) {
+      const source = Array.isArray(examSets) && examSets.length ? examSets : [{
+        id: 'default-set',
+        name: 'Bộ đề mặc định',
+        specs: legacy.specs || [],
+        settings: legacy.settings || defaultSettings,
+        currentExam: legacy.currentExam || [],
+        savedExams: legacy.savedExams || {}
+      }];
+      return source.map((set, index) => ({
+        id: set.id || crypto.randomUUID(),
+        name: set.name || `Bộ đề ${index + 1}`,
+        specs: Array.isArray(set.specs) ? set.specs : [],
+        settings: normalizeSettings(set.settings || defaultSettings),
+        currentExam: Array.isArray(set.currentExam) ? normalizeQuestions(set.currentExam) : [],
+        savedExams: normalizeSavedExams(set.savedExams)
+      }));
+    }
+
+    function activeExamSet(targetState = state) {
+      targetState.examSets = normalizeExamSets(targetState.examSets, targetState);
+      let set = targetState.examSets.find((item) => item.id === targetState.activeExamSetId);
+      if (!set) {
+        set = targetState.examSets[0];
+        targetState.activeExamSetId = set.id;
+      }
+      return set;
+    }
+
+    function applyActiveExamSetToState(targetState = state) {
+      const set = activeExamSet(targetState);
+      targetState.specs = structuredClone(set.specs || []);
+      targetState.settings = normalizeSettings(set.settings || defaultSettings);
+      targetState.currentExam = normalizeQuestions(set.currentExam || []);
+      targetState.savedExams = normalizeSavedExams(set.savedExams);
+    }
+
+    function syncActiveExamSetFromState() {
+      const set = activeExamSet();
+      set.specs = structuredClone(state.specs || []);
+      set.settings = normalizeSettings(state.settings || defaultSettings);
+      set.currentExam = normalizeQuestions(state.currentExam || []);
+      set.savedExams = normalizeSavedExams(state.savedExams);
     }
 
     function normalizeAccounts(accounts = []) {
@@ -253,6 +341,19 @@
       };
     }
 
+    function normalizeAnswerTemplate(template = {}) {
+      return {
+        ...structuredClone(defaultAnswerTemplate),
+        ...(template || {}),
+        examGapLines: Math.min(10, Math.max(1, Number(template.examGapLines || defaultAnswerTemplate.examGapLines))),
+        textStyles: {
+          ...structuredClone(defaultAnswerTextStyles),
+          ...((template || {}).textStyles || {})
+        },
+        templateVersion: 1
+      };
+    }
+
     function normalizeSettings(settings = {}) {
       const totalExams = Math.max(1, Number(settings.totalExams || defaultSettings.totalExams));
       const selectedExamNo = Math.min(totalExams, Math.max(1, Number(settings.selectedExamNo || defaultSettings.selectedExamNo)));
@@ -262,7 +363,15 @@
     function normalizeQuestions(questions) {
       return questions.map((question) => ({
         ...question,
+        examSetId: question.examSetId || 'default-set',
         examNo: undefined
+      }));
+    }
+
+    function normalizeCategories(categories = []) {
+      return categories.map((category) => ({
+        ...category,
+        examSetId: category.examSetId || 'default-set'
       }));
     }
 
@@ -338,7 +447,11 @@
 
     function examForPreview(examNo) {
       const saved = getSavedExam(examNo);
-      return saved.map((q) => ({ ...q, examNo: Number(examNo), categoryName: q.categoryName || categoryName(q.categoryId) }));
+      return saved.map((q) => {
+        const latest = state.questions.find((item) => item.id === q.id);
+        const merged = latest ? { ...q, ...latest } : q;
+        return { ...merged, examNo: Number(examNo), categoryName: categoryName(merged.categoryId) };
+      });
     }
 
     function examTitle(title, examNo) {
@@ -364,8 +477,33 @@
       ].join('; ');
     }
 
+    function getAnswerTextStyle(key) {
+      state.answerTemplate = normalizeAnswerTemplate(state.answerTemplate);
+      return state.answerTemplate.textStyles[key] || defaultAnswerTextStyles[key];
+    }
+
+    function answerStyleAttr(key) {
+      const style = getAnswerTextStyle(key);
+      return [
+        `font-family: '${style.font}', serif`,
+        `font-size: ${Number(style.size || 14)}pt`,
+        `font-weight: ${style.bold ? '700' : '400'}`,
+        `text-align: ${style.align || 'left'}`
+      ].join('; ');
+    }
+
     function categoryName(id) {
       return state.categories.find((cat) => cat.id === id)?.name || 'Chưa có mục';
+    }
+
+    function currentCategories() {
+      const setId = activeExamSet().id;
+      return state.categories.filter((cat) => (cat.examSetId || 'default-set') === setId);
+    }
+
+    function currentQuestions() {
+      const setId = activeExamSet().id;
+      return state.questions.filter((question) => (question.examSetId || 'default-set') === setId);
     }
 
     function renderAll() {
@@ -374,6 +512,8 @@
       renderAuthState();
       renderDashboard();
       renderAccounts();
+      renderExamSets();
+      renderQuestionExamSetButtons();
       renderCategoryOptions();
       if ($('filterCategory')) $('filterCategory').value = preservedFilter;
       if ($('searchQuestion')) $('searchQuestion').value = preservedQuery;
@@ -383,6 +523,8 @@
       renderSpecs();
       fillTemplateForm();
       renderExamPreview();
+      fillAnswerTemplateForm();
+      renderAnswerPreview();
       renderDiplomaAll();
       saveState();
     }
@@ -445,7 +587,7 @@
     }
 
     function renderCategoryOptions() {
-      const options = state.categories.map((cat) => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      const options = currentCategories().map((cat) => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
       $('questionCategory').innerHTML = options;
       $('filterCategory').innerHTML = `<option value="">Tất cả mục</option>${options}`;
     }
@@ -456,10 +598,28 @@
       $('selectedExamNo').innerHTML = examNumberOptions(state.settings.selectedExamNo);
     }
 
+    function renderExamSets() {
+      if (!$('examSetSelect')) return;
+      state.examSets = normalizeExamSets(state.examSets, state);
+      const set = activeExamSet();
+      $('examSetSelect').innerHTML = state.examSets.map((item) => `<option value="${item.id}" ${item.id === set.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('');
+    }
+
+    function renderQuestionExamSetButtons() {
+      if (!$('questionExamSetButtons')) return;
+      const activeId = activeExamSet().id;
+      $('questionExamSetButtons').innerHTML = state.examSets.map((set) => `
+        <button type="button" class="${set.id === activeId && questionBankSetSelected ? '' : 'secondary'}" onclick="openQuestionBankForSet('${set.id}')">
+          ${escapeHtml(set.name)}
+        </button>
+      `).join('');
+      $('questionBankPanel').classList.toggle('hidden', !questionBankSetSelected);
+    }
+
     function renderQuestions() {
       const filter = $('filterCategory').value;
       const query = $('searchQuestion').value.trim().toLowerCase();
-      const questions = state.questions.filter((q) => {
+      const questions = currentQuestions().filter((q) => {
         const byCategory = !filter || q.categoryId === filter;
         const byText = !query || q.text.toLowerCase().includes(query) || categoryName(q.categoryId).toLowerCase().includes(query);
         return byCategory && byText;
@@ -484,8 +644,8 @@
     }
 
     function renderCategories() {
-      $('categoryList').innerHTML = state.categories.map((cat) => {
-        const count = state.questions.filter((q) => q.categoryId === cat.id).length;
+      $('categoryList').innerHTML = currentCategories().map((cat) => {
+        const count = currentQuestions().filter((q) => q.categoryId === cat.id).length;
         return `
           <div class="row-item">
             <div class="row-title">
@@ -502,11 +662,12 @@
     }
 
     function renderSpecs() {
-      if (!state.specs.length && state.categories.length) {
-        state.specs.push({ categoryId: state.categories[0].id, count: 1 });
+      const categories = currentCategories();
+      if (!state.specs.length && categories.length) {
+        state.specs.push({ categoryId: categories[0].id, count: 1 });
       }
       $('specList').innerHTML = state.specs.map((spec, index) => {
-        const options = state.categories.map((cat) => `<option value="${cat.id}" ${cat.id === spec.categoryId ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`).join('');
+        const options = categories.map((cat) => `<option value="${cat.id}" ${cat.id === spec.categoryId ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`).join('');
         return `
           <div class="spec-row">
             <label>Mục
@@ -520,7 +681,7 @@
         `;
       }).join('');
       const total = state.specs.reduce((sum, spec) => sum + Number(spec.count || 0), 0);
-      $('generatorHint').textContent = `Đang tạo đề số ${formatExamNo(state.settings.selectedExamNo)}. Tổng số câu sẽ lấy: ${total}. Phần mềm lấy ngẫu nhiên từ ngân hàng câu hỏi chung theo từng mục.`;
+      $('generatorHint').textContent = `Đang tạo đề số ${formatExamNo(state.settings.selectedExamNo)} trong "${activeExamSet().name}". Tổng số câu sẽ lấy: ${total}. Phần mềm lấy ngẫu nhiên từ ngân hàng câu hỏi của bộ đề đang chọn.`;
     }
 
     function syncPreviewCopies() {
@@ -530,7 +691,7 @@
     }
 
     function fitPreviewHeaders() {
-      document.querySelectorAll('#examPreview .exam-head > div, #templatePreview .exam-head > div').forEach((el) => {
+      document.querySelectorAll('#examPreview .exam-head > div, #templatePreview .exam-head > div, #answerPreview .answer-head > div').forEach((el) => {
         const original = Number.parseFloat(el.style.fontSize) || 14;
         let size = original;
         el.style.fontSize = `${size}pt`;
@@ -581,6 +742,7 @@
       };
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
     }
 
     function fillStyleControls() {
@@ -607,6 +769,66 @@
       readTemplateForm();
     }
 
+    function fillAnswerTemplateForm() {
+      if (!$('ansTplLeftHeader')) return;
+      state.answerTemplate = normalizeAnswerTemplate(state.answerTemplate);
+      const t = state.answerTemplate;
+      $('ansTplLeftHeader').value = t.leftHeader;
+      $('ansTplRightHeader').value = t.rightHeader;
+      $('ansTplTitle').value = t.title;
+      $('ansTplNumberStyle').value = t.numberStyle;
+      $('ansTplExamGapLines').value = t.examGapLines;
+      fillAnswerStyleControls();
+    }
+
+    function readAnswerTemplateForm() {
+      state.answerTemplate = normalizeAnswerTemplate({
+        ...state.answerTemplate,
+        leftHeader: $('ansTplLeftHeader').value,
+        rightHeader: $('ansTplRightHeader').value,
+        title: $('ansTplTitle').value,
+        numberStyle: $('ansTplNumberStyle').value,
+        examGapLines: Math.min(10, Math.max(1, Number($('ansTplExamGapLines').value || defaultAnswerTemplate.examGapLines))),
+        textStyles: {
+          ...structuredClone(defaultAnswerTextStyles),
+          ...(state.answerTemplate.textStyles || {})
+        }
+      });
+      saveState();
+      renderAnswerPreview();
+    }
+
+    function fillAnswerStyleControls() {
+      if (!$('answerStyleTarget')) return;
+      const key = $('answerStyleTarget').value || 'headerLeft';
+      const style = getAnswerTextStyle(key);
+      $('answerStyleFont').value = style.font;
+      $('answerStyleSize').value = Number(style.size || 14);
+      $('answerStyleAlign').value = style.align || 'left';
+      $('answerStyleBold').checked = Boolean(style.bold);
+    }
+
+    function readAnswerStyleControls() {
+      const key = $('answerStyleTarget').value;
+      state.answerTemplate.textStyles = {
+        ...structuredClone(defaultAnswerTextStyles),
+        ...(state.answerTemplate.textStyles || {}),
+        [key]: {
+          font: $('answerStyleFont').value,
+          size: Math.max(8, Math.min(28, Number($('answerStyleSize').value || 14))),
+          bold: $('answerStyleBold').checked,
+          align: $('answerStyleAlign').value
+        }
+      };
+      readAnswerTemplateForm();
+    }
+
+    function renderAnswerPreview() {
+      if (!$('answerPreview')) return;
+      $('answerPreview').innerHTML = buildAllAnswersHtml(false);
+      fitPreviewHeaders();
+    }
+
     function renderExamPreview() {
       const selectedExamNo = state.settings?.selectedExamNo || 1;
       const firstExamNo = Math.floor((selectedExamNo - 1) / 2) * 2 + 1;
@@ -626,7 +848,7 @@
     function examWarnings(examNo) {
       const warnings = [];
       state.specs.forEach((spec) => {
-        const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+        const available = currentQuestions().filter((q) => q.categoryId === spec.categoryId).length;
         if (Number(spec.count) > available) {
           warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
         }
@@ -724,25 +946,34 @@
       setSavedExam(selectedExamNo, state.currentExam);
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
       alert(`Đã lưu đề số ${formatExamNo(selectedExamNo)}.`);
     }
 
     function buildExamQuestions(examNo) {
       const selected = [];
       state.specs.forEach((spec) => {
-        const pool = state.questions.filter((q) => q.categoryId === spec.categoryId);
+        const pool = currentQuestions().filter((q) => q.categoryId === spec.categoryId);
         selected.push(...shuffle(pool).slice(0, Number(spec.count || 0)));
       });
       return selected.map((q) => ({ ...q, examNo: Number(examNo), categoryName: categoryName(q.categoryId) }));
     }
 
+    function questionsForOutput(examNo) {
+      const savedQuestions = examForPreview(examNo);
+      if (savedQuestions.length) return savedQuestions;
+      const generated = buildExamQuestions(examNo);
+      setSavedExam(examNo, generated);
+      return generated;
+    }
+
     function buildAllExamPages() {
       const halves = Array.from({ length: state.settings.totalExams }, (_, index) => {
         const examNo = index + 1;
-        const questions = buildExamQuestions(examNo);
+        const questions = questionsForOutput(examNo);
         const warnings = [];
         state.specs.forEach((spec) => {
-          const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+          const available = currentQuestions().filter((q) => q.categoryId === spec.categoryId).length;
           if (Number(spec.count) > available) {
             warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
           }
@@ -760,11 +991,10 @@
       const parts = [];
       for (let index = 0; index < state.settings.totalExams; index++) {
         const examNo = index + 1;
-        const savedQuestions = examForPreview(examNo);
-        const questions = savedQuestions.length ? savedQuestions : buildExamQuestions(examNo);
+        const questions = questionsForOutput(examNo);
         const warnings = [];
         state.specs.forEach((spec) => {
-          const available = state.questions.filter((q) => q.categoryId === spec.categoryId).length;
+          const available = currentQuestions().filter((q) => q.categoryId === spec.categoryId).length;
           if (Number(spec.count) > available) {
             warnings.push(`Đề số ${formatExamNo(examNo)}, mục "${categoryName(spec.categoryId)}" chỉ có ${available}/${spec.count} câu hỏi.`);
           }
@@ -774,6 +1004,82 @@
           parts.push(buildWordExamGap());
           if (examNo % 2 === 0) parts.push('<div class="exam-page-break"></div>');
         }
+      }
+      return parts.join('');
+    }
+
+    function answerTitle(title, examNo) {
+      const base = String(title || 'DE THI SO').replace(/\s*\d+\s*$/, '').replace(/\s*[:：]\s*$/, '');
+      return `${base}: ${formatExamNo(examNo)}`;
+    }
+
+    function buildAnswerQuestionsHtml(questions) {
+      const t = state.answerTemplate;
+      return questions.length ? questions.map((item, index) => {
+        const prefix = t.numberStyle ? `${escapeHtml(t.numberStyle)} ${index + 1}:` : `${index + 1}:`;
+        const question = String(item.text || '').trim() || 'Chưa có nội dung câu hỏi';
+        const answer = String(item.answer || '').trim() || 'Chưa nhập đáp án';
+        return `
+          <div class="answer-question" style="${answerStyleAttr('question')}">
+            <div><strong>${prefix}</strong> ${lineBreaks(question)}</div>
+            <div class="answer-content"><strong>Trả lời:</strong> ${lineBreaks(answer)}</div>
+          </div>
+        `;
+      }).join('') : '<p><em>Chưa có câu hỏi trong đề này.</em></p>';
+    }
+
+    function buildAnswerHeaderHtml() {
+      const t = state.answerTemplate;
+      return `
+        <div class="answer-head">
+          <div style="${answerStyleAttr('headerLeft')}">${lineBreaks(t.leftHeader)}</div>
+          <div style="${answerStyleAttr('headerRight')}">${lineBreaks(t.rightHeader)}</div>
+        </div>
+      `;
+    }
+
+    function buildAnswerExamHtml(examNo, questions) {
+      const t = state.answerTemplate;
+      return `
+        <section class="answer-exam">
+          <h1 style="${answerStyleAttr('title')}">${escapeHtml(answerTitle(t.title, examNo))}</h1>
+          ${buildAnswerQuestionsHtml(questions)}
+        </section>
+      `;
+    }
+
+    function buildAnswerGap() {
+      const lines = Math.min(10, Math.max(1, Number(state.answerTemplate.examGapLines || defaultAnswerTemplate.examGapLines)));
+      return Array.from({ length: lines }, () => '<div class="answer-gap">&nbsp;</div>').join('');
+    }
+
+    function buildAllAnswersHtml(ensureQuestions = true) {
+      state.answerTemplate = normalizeAnswerTemplate(state.answerTemplate);
+      const parts = [buildAnswerHeaderHtml()];
+      for (let index = 0; index < state.settings.totalExams; index++) {
+        const examNo = index + 1;
+        const questions = ensureQuestions ? questionsForOutput(examNo) : examForPreview(examNo);
+        parts.push(buildAnswerExamHtml(examNo, questions));
+        if (examNo < state.settings.totalExams) parts.push(buildAnswerGap());
+      }
+      return parts.join('');
+    }
+
+    function buildAllAnswersWordHtml() {
+      const t = state.answerTemplate;
+      const header = `
+        <table class="word-header-table">
+          <tr>
+            <td style="width:50%; ${answerStyleAttr('headerLeft')}">${lineBreaks(t.leftHeader)}</td>
+            <td style="width:50%; ${answerStyleAttr('headerRight')}">${lineBreaks(t.rightHeader)}</td>
+          </tr>
+        </table>
+      `;
+      const parts = [header];
+      for (let index = 0; index < state.settings.totalExams; index++) {
+        const examNo = index + 1;
+        parts.push(buildAnswerExamHtml(examNo, questionsForOutput(examNo)));
+        if (examNo < state.settings.totalExams) parts.push(buildAnswerGap());
       }
       return parts.join('');
     }
@@ -794,7 +1100,16 @@
     }
 
     function exportAllWord() {
-      downloadWordDocument(buildAllExamWordPages(), `tat-ca-de-thi-${new Date().toISOString().slice(0,10)}.doc`);
+      const content = buildAllExamWordPages();
+      saveState();
+      downloadWordDocument(content, `tat-ca-de-thi-${new Date().toISOString().slice(0,10)}.doc`);
+    }
+
+    function exportAllAnswersWord() {
+      const content = buildAllAnswersWordHtml();
+      saveState();
+      const setName = activeExamSet().name.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'bo-de';
+      downloadWordDocument(content, `dap-an-${setName}-${new Date().toISOString().slice(0,10)}.doc`);
     }
 
     function downloadWordDocument(content, filename) {
@@ -819,6 +1134,13 @@
           .exam-title { text-align: center; margin: 0 0 13pt; font-size: 14pt; }
           .exam-title h1 { font-size: 14pt; margin: 0 0 5pt; text-transform: uppercase; }
           .question { margin: 6pt 0; page-break-inside: avoid; font-size: 14pt; }
+          .answer-head { display: table; width: 100%; font-weight: bold; text-align: center; margin-bottom: 30pt; font-size: 14pt; }
+          .answer-head > div { display: table-cell; width: 50%; vertical-align: top; white-space: nowrap; text-align: center; }
+          .answer-exam { margin: 0; page-break-inside: avoid; }
+          .answer-exam h1 { font-size: 14pt; margin: 12pt 0 8pt; text-transform: uppercase; }
+          .answer-question { margin: 6pt 0; page-break-inside: avoid; font-size: 14pt; }
+          .answer-content { margin-top: 3pt; padding-left: 10pt; }
+          .answer-gap { height: 12pt; line-height: 12pt; font-size: 12pt; }
           .exam-page-break { page-break-after: always; height: 0; line-height: 0; font-size: 0; }
           .answer-space { height: 70px; border-bottom: 1px dotted #888; margin-top: 8px; }
         </style></head><body><div class="WordSection1">${content}</div></body></html>
@@ -829,11 +1151,24 @@
     function printAllExams() {
       const original = $('examPreview').innerHTML;
       $('examPreview').innerHTML = buildAllExamPages();
+      saveState();
       syncPreviewCopies();
       window.print();
       setTimeout(() => {
         $('examPreview').innerHTML = original;
         syncPreviewCopies();
+      }, 300);
+    }
+
+    function printAllAnswers() {
+      const originalExam = $('examPreview').innerHTML;
+      $('examPreview').innerHTML = buildAllAnswersHtml(true);
+      saveState();
+      window.print();
+      setTimeout(() => {
+        $('examPreview').innerHTML = originalExam;
+        syncPreviewCopies();
+        renderAnswerPreview();
       }, 300);
     }
 
@@ -876,6 +1211,12 @@
       Object.keys(state.savedExams || {}).forEach((examNo) => {
         state.savedExams[examNo] = state.savedExams[examNo].filter((q) => q.id !== id);
       });
+      state.examSets.forEach((set) => {
+        set.currentExam = (set.currentExam || []).filter((q) => q.id !== id);
+        Object.keys(set.savedExams || {}).forEach((examNo) => {
+          set.savedExams[examNo] = set.savedExams[examNo].filter((q) => q.id !== id);
+        });
+      });
       renderAll();
     };
 
@@ -897,6 +1238,13 @@
       Object.keys(state.savedExams || {}).forEach((examNo) => {
         state.savedExams[examNo] = state.savedExams[examNo].filter((q) => q.categoryId !== id);
       });
+      state.examSets.forEach((set) => {
+        set.specs = (set.specs || []).filter((spec) => spec.categoryId !== id);
+        set.currentExam = (set.currentExam || []).filter((q) => q.categoryId !== id);
+        Object.keys(set.savedExams || {}).forEach((examNo) => {
+          set.savedExams[examNo] = set.savedExams[examNo].filter((q) => q.categoryId !== id);
+        });
+      });
       renderAll();
     };
 
@@ -905,6 +1253,7 @@
       renderSpecs();
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
     };
 
     window.removeSpec = (index) => {
@@ -912,6 +1261,7 @@
       renderSpecs();
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
     };
 
     function clearAccountForm() {
@@ -1095,6 +1445,7 @@
     }
 
     function switchDiplomaView(view) {
+      animateContentSwitch();
       document.querySelectorAll('[data-diploma-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.diplomaView === view));
       document.querySelectorAll('[id^="diploma-view-"]').forEach((section) => section.classList.add('hidden'));
       $(`diploma-view-${view}`).classList.remove('hidden');
@@ -1157,11 +1508,26 @@
       renderAll();
     };
 
+    function animateContentSwitch() {
+      document.querySelectorAll('.content').forEach((content) => {
+        content.classList.remove('is-switching');
+        void content.offsetWidth;
+        content.classList.add('is-switching');
+        setTimeout(() => content.classList.remove('is-switching'), 360);
+      });
+    }
+
     function switchView(view) {
       if (view === 'accounts' && !isAdmin()) view = 'dashboard';
+      if (view === 'questions') questionBankSetSelected = false;
+      const current = document.querySelector('main > section:not(.hidden)');
+      if (current) current.classList.add('view-leaving');
+      animateContentSwitch();
       document.querySelectorAll('.nav button[data-view]').forEach((btn) => btn.classList.toggle('active', btn.dataset.view === view));
       document.querySelectorAll('main > section').forEach((section) => section.classList.add('hidden'));
       $(`view-${view}`).classList.remove('hidden');
+      $(`view-${view}`).classList.remove('view-leaving');
+      renderQuestionExamSetButtons();
       renderExamPreview();
     }
 
@@ -1175,6 +1541,7 @@
       });
       state.currentExam = examForPreview(state.settings.selectedExamNo);
       renderAll();
+      renderAnswerPreview();
     }
 
     function updateSelectedExamNo(value) {
@@ -1184,6 +1551,83 @@
       renderSpecs();
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
+    }
+
+    function switchExamSet(id) {
+      syncActiveExamSetFromState();
+      state.activeExamSetId = id;
+      applyActiveExamSetToState();
+      renderExamSets();
+      renderExamControls();
+      renderSpecs();
+      renderExamPreview();
+      renderAnswerPreview();
+      saveState();
+    }
+
+    window.openQuestionBankForSet = (id) => {
+      questionBankSetSelected = true;
+      switchExamSet(id);
+      renderQuestionExamSetButtons();
+    };
+
+    function addExamSet() {
+      syncActiveExamSetFromState();
+      const number = (state.examSets?.length || 0) + 1;
+      const name = String(arguments[0] || '').trim() || `Bộ đề ${number}`;
+      const set = {
+        id: crypto.randomUUID(),
+        name,
+        specs: [],
+        settings: { ...defaultSettings },
+        currentExam: [],
+        savedExams: {}
+      };
+      state.examSets.push(set);
+      state.activeExamSetId = set.id;
+      applyActiveExamSetToState();
+      renderAll();
+      return set;
+    }
+
+    function addQuestionExamSet() {
+      openExamSetNameModal();
+    }
+
+    function finishAddQuestionExamSet(name) {
+      const set = addExamSet(name);
+      questionBankSetSelected = true;
+      renderQuestionExamSetButtons();
+    }
+
+    function openExamSetNameModal() {
+      $('newExamSetName').value = '';
+      $('examSetNameModal').classList.remove('hidden');
+      setTimeout(() => $('newExamSetName').focus(), 0);
+    }
+
+    function closeExamSetNameModal() {
+      $('examSetNameModal').classList.add('hidden');
+      $('newExamSetName').value = '';
+    }
+
+    function deleteExamSet() {
+      if (state.examSets.length <= 1) return alert('Phải giữ lại ít nhất một bộ đề.');
+      const set = activeExamSet();
+      if (!confirm(`Xóa "${set.name}" và toàn bộ đề đã lưu trong bộ này?`)) return;
+      state.examSets = state.examSets.filter((item) => item.id !== set.id);
+      state.categories = state.categories.filter((cat) => (cat.examSetId || 'default-set') !== set.id);
+      state.questions = state.questions.filter((question) => (question.examSetId || 'default-set') !== set.id);
+      state.activeExamSetId = state.examSets[0].id;
+      questionBankSetSelected = false;
+      applyActiveExamSetToState();
+      renderAll();
+    }
+
+    function deleteQuestionExamSet() {
+      if (!questionBankSetSelected) return alert('Hãy chọn bộ đề cần xóa trước.');
+      deleteExamSet();
     }
 
     document.querySelectorAll('.nav button[data-view]').forEach((button) => {
@@ -1322,11 +1766,13 @@
       event.preventDefault();
       const payload = {
         id: $('questionId').value || crypto.randomUUID(),
+        examSetId: activeExamSet().id,
         categoryId: $('questionCategory').value,
         text: $('questionText').value.trim(),
         answer: $('questionAnswer').value.trim(),
         points: Number($('questionPoints').value || 0)
       };
+      if (!payload.categoryId) return alert('Hãy thêm ít nhất một mục câu hỏi cho bộ đề này trước.');
       if (!payload.text) return;
       const existing = state.questions.findIndex((q) => q.id === payload.id);
       if (existing >= 0) state.questions[existing] = payload;
@@ -1339,6 +1785,17 @@
     $('cancelEditQuestion').addEventListener('click', clearQuestionForm);
     $('filterCategory').addEventListener('change', renderQuestions);
     $('searchQuestion').addEventListener('input', renderQuestions);
+    $('examSetSelect').addEventListener('change', (event) => switchExamSet(event.target.value));
+    $('addQuestionExamSet').addEventListener('click', addQuestionExamSet);
+    $('deleteQuestionExamSet').addEventListener('click', deleteQuestionExamSet);
+    $('examSetNameForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = $('newExamSetName').value.trim();
+      if (!name) return;
+      closeExamSetNameModal();
+      finishAddQuestionExamSet(name);
+    });
+    $('cancelExamSetName').addEventListener('click', closeExamSetNameModal);
     $('totalExamCount').addEventListener('change', (event) => updateTotalExams(event.target.value));
     $('selectedExamNo').addEventListener('change', (event) => updateSelectedExamNo(event.target.value));
 
@@ -1347,27 +1804,31 @@
       if (!requireAdmin()) return;
       const name = $('categoryName').value.trim();
       if (!name) return;
-      state.categories.push({ id: crypto.randomUUID(), name });
+      state.categories.push({ id: crypto.randomUUID(), examSetId: activeExamSet().id, name });
       $('categoryName').value = '';
       renderAll();
     });
 
     $('addSpec').addEventListener('click', () => {
-      if (!state.categories.length) return alert('Hãy thêm ít nhất một mục câu hỏi trước.');
-      state.specs.push({ categoryId: state.categories[0].id, count: 1 });
+      const categories = currentCategories();
+      if (!categories.length) return alert('Hãy thêm ít nhất một mục câu hỏi cho bộ đề này trước.');
+      state.specs.push({ categoryId: categories[0].id, count: 1 });
       renderSpecs();
       saveState();
+      renderAnswerPreview();
     });
 
     $('generateExam').addEventListener('click', generateExam);
     $('saveGeneratedExam').addEventListener('click', saveGeneratedExam);
     $('exportWord').addEventListener('click', exportWord);
     $('exportAllWord').addEventListener('click', exportAllWord);
+    $('exportAllAnswersWord').addEventListener('click', exportAllAnswersWord);
     $('printExam').addEventListener('click', () => {
       renderExamPreview();
       window.print();
     });
     $('printAllExam').addEventListener('click', printAllExams);
+    $('printAllAnswers').addEventListener('click', printAllAnswers);
     $('saveTemplate').addEventListener('click', () => {
       readTemplateForm();
       alert('Đã lưu form đề thi.');
@@ -1375,6 +1836,15 @@
     $('resetTemplate').addEventListener('click', () => {
       if (!requireAdmin()) return;
       state.template = { ...defaultTemplate };
+      renderAll();
+    });
+    $('saveAnswerTemplate').addEventListener('click', () => {
+      readAnswerTemplateForm();
+      alert('Đã lưu form đáp án.');
+    });
+    $('resetAnswerTemplate').addEventListener('click', () => {
+      if (!requireAdmin()) return;
+      state.answerTemplate = structuredClone(defaultAnswerTemplate);
       renderAll();
     });
 
@@ -1417,17 +1887,21 @@
         try {
           const imported = JSON.parse(reader.result);
           state = {
-            categories: imported.categories || [],
+            categories: normalizeCategories(imported.categories || []),
             questions: normalizeQuestions(imported.questions || []),
             specs: imported.specs || [],
             template: normalizeTemplate(imported.template),
             settings: normalizeSettings(imported.settings),
+            activeExamSetId: imported.activeExamSetId || imported.examSets?.[0]?.id || 'default-set',
+            examSets: normalizeExamSets(imported.examSets, imported),
             accounts: normalizeAccounts(imported.accounts),
             currentExam: imported.currentExam || [],
             savedExams: normalizeSavedExams(imported.savedExams),
+            answerTemplate: normalizeAnswerTemplate(imported.answerTemplate),
             diplomaStudents: normalizeDiplomaStudents(imported.diplomaStudents),
             diplomaTemplate: normalizeDiplomaTemplate(imported.diplomaTemplate)
           };
+          applyActiveExamSetToState();
           renderAll();
           alert('Đã khôi phục dữ liệu.');
         } catch {
@@ -1450,7 +1924,37 @@
       $(id).addEventListener('input', readStyleControls);
       $(id).addEventListener('change', readStyleControls);
     });
+    ['ansTplLeftHeader', 'ansTplRightHeader', 'ansTplTitle', 'ansTplNumberStyle', 'ansTplExamGapLines'].forEach((id) => {
+      $(id).addEventListener('input', readAnswerTemplateForm);
+      $(id).addEventListener('change', readAnswerTemplateForm);
+    });
+    $('answerStyleTarget').addEventListener('change', fillAnswerStyleControls);
+    ['answerStyleFont', 'answerStyleSize', 'answerStyleAlign', 'answerStyleBold'].forEach((id) => {
+      $(id).addEventListener('input', readAnswerStyleControls);
+      $(id).addEventListener('change', readAnswerStyleControls);
+    });
 
+    function initButtonEffects() {
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button || button.disabled) return;
+
+        const rect = button.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        ripple.className = 'btn-ripple';
+        ripple.style.left = `${event.clientX - rect.left}px`;
+        ripple.style.top = `${event.clientY - rect.top}px`;
+        button.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 620);
+
+        if (!button.closest('.nav') && !button.classList.contains('icon')) {
+          button.classList.add('is-loading');
+          setTimeout(() => button.classList.remove('is-loading'), 420);
+        }
+      });
+    }
+
+    initButtonEffects();
     initTrial();
     renderAll();
 

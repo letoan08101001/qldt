@@ -63,6 +63,22 @@
     </div>
   </div>
 
+  <div id="examSetNameModal" class="modal-backdrop hidden">
+    <div class="trial-modal form-modal">
+      <h2>Thêm bộ đề mới</h2>
+      <form id="examSetNameForm" class="login-form">
+        <label>
+          Tên bộ đề
+          <input id="newExamSetName" placeholder="Ví dụ: Bộ đề thi sửa chữa xe máy" required>
+        </label>
+        <div class="actions">
+          <button type="submit">Xong</button>
+          <button class="secondary" id="cancelExamSetName" type="button">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
@@ -75,6 +91,7 @@
         <button data-view="questions">☰ Câu hỏi</button>
         <button data-view="generator">⚙ Tạo đề</button>
         <button data-view="template">✎ Form đề thi</button>
+        <button data-view="answer-template">☑ Form đáp án</button>
         <button data-view="accounts" data-admin-only>♙ Tài khoản</button>
         <button data-view="data">⇅ Dữ liệu</button>
       </nav>
@@ -115,70 +132,81 @@
         <div class="topbar">
           <div>
             <h2>Ngân hàng câu hỏi</h2>
-            <p>Thêm câu hỏi vào từng mục để khi tạo đề hệ thống chỉ lấy đúng nhóm đã chọn.</p>
+            <p>Chọn bộ đề trước, sau đó quản lý mục câu hỏi và câu hỏi riêng của bộ đề đó.</p>
           </div>
           <div class="actions">
             <button class="secondary" id="clearQuestionForm">Làm mới form</button>
           </div>
         </div>
 
-        <div class="grid-2">
-          <section class="panel">
-            <h3 id="questionFormTitle">Thêm câu hỏi</h3>
-            <form id="questionForm" class="form-grid">
-              <input type="hidden" id="questionId">
+        <section class="panel">
+          <h3>Chọn bộ đề</h3>
+          <div id="questionExamSetButtons" class="exam-set-buttons"></div>
+          <div class="actions" style="margin-top:12px">
+            <button id="addQuestionExamSet" type="button">Thêm bộ đề mới</button>
+            <button class="danger" id="deleteQuestionExamSet" type="button">Xóa bộ đề</button>
+          </div>
+        </section>
+
+        <div id="questionBankPanel" class="hidden">
+          <div class="grid-2">
+            <section class="panel">
+              <h3 id="questionFormTitle">Thêm câu hỏi</h3>
+              <form id="questionForm" class="form-grid">
+                <input type="hidden" id="questionId">
+                <label>
+                  Mục câu hỏi
+                  <select id="questionCategory" required></select>
+                </label>
+                <label>
+                  Điểm
+                  <input id="questionPoints" type="number" min="0" step="0.25" value="1">
+                </label>
+                <label class="full">
+                  Nội dung câu hỏi
+                  <textarea id="questionText" required placeholder="Nhập nội dung câu hỏi..."></textarea>
+                </label>
+                <label class="full">
+                  Đáp án
+                  <textarea id="questionAnswer" placeholder="Nhập đáp án để in phiếu đáp án theo từng bộ đề."></textarea>
+                </label>
+                <div class="actions full">
+                  <button type="submit">Lưu câu hỏi</button>
+                  <button type="button" class="secondary" id="cancelEditQuestion">Hủy sửa</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel">
+              <h3>Danh sách câu hỏi</h3>
+              <div class="form-grid">
+                <label>
+                  Lọc theo mục
+                  <select id="filterCategory"></select>
+                </label>
+                <label>
+                  Tìm nội dung
+                  <input id="searchQuestion" placeholder="Nhập từ khóa...">
+                </label>
+              </div>
+              <div id="questionList" class="list" style="margin-top:12px"></div>
+            </section>
+          </div>
+
+          <section class="panel" style="margin-top:16px">
+            <h3>Quản lý mục câu hỏi</h3>
+            <form id="categoryForm" class="form-grid">
               <label>
-                Mục câu hỏi
-                <select id="questionCategory" required></select>
+                Tên mục mới
+                <input id="categoryName" placeholder="Ví dụ: Lý thuyết, Bài tập, Vận dụng...">
               </label>
-              <label>
-                Điểm
-                <input id="questionPoints" type="number" min="0" step="0.25" value="1">
-              </label>
-              <label class="full">
-                Nội dung câu hỏi
-                <textarea id="questionText" required placeholder="Nhập nội dung câu hỏi..."></textarea>
-              </label>
-              <label class="full">
-                Gợi ý/đáp án nội bộ
-                <textarea id="questionAnswer" placeholder="Không bắt buộc, chỉ để quản lý trong ngân hàng."></textarea>
-              </label>
-              <div class="actions full">
-                <button type="submit">Lưu câu hỏi</button>
-                <button type="button" class="secondary" id="cancelEditQuestion">Hủy sửa</button>
+              <div class="actions" style="align-self:end">
+                <button type="submit">Thêm mục</button>
               </div>
             </form>
-          </section>
-
-          <section class="panel">
-            <h3>Danh sách câu hỏi</h3>
-            <div class="form-grid">
-              <label>
-                Lọc theo mục
-                <select id="filterCategory"></select>
-              </label>
-              <label>
-                Tìm nội dung
-                <input id="searchQuestion" placeholder="Nhập từ khóa...">
-              </label>
-            </div>
-            <div id="questionList" class="list" style="margin-top:12px"></div>
+            <div id="categoryList" class="list" style="margin-top:12px; max-height:260px"></div>
           </section>
         </div>
-
-        <section class="panel" style="margin-top:16px">
-          <h3>Quản lý mục câu hỏi</h3>
-          <form id="categoryForm" class="form-grid">
-            <label>
-              Tên mục mới
-              <input id="categoryName" placeholder="Ví dụ: Lý thuyết, Bài tập, Vận dụng...">
-            </label>
-            <div class="actions" style="align-self:end">
-              <button type="submit">Thêm mục</button>
-            </div>
-          </form>
-          <div id="categoryList" class="list" style="margin-top:12px; max-height:260px"></div>
-        </section>
       </section>
 
       <section id="view-generator" class="hidden">
@@ -194,13 +222,19 @@
             <button class="secondary" id="printExam">In trực tiếp</button>
             <button class="warning" id="exportAllWord">Xuất tất cả đề</button>
             <button class="secondary" id="printAllExam">In tất cả đề</button>
+            <button class="warning" id="exportAllAnswersWord">Xuất đáp án</button>
+            <button class="secondary" id="printAllAnswers">In đáp án</button>
           </div>
         </div>
 
-        <div class="grid-2">
+        <div class="generator-layout">
           <section class="panel">
             <h3>Cấu hình lấy câu hỏi</h3>
             <div class="generator-settings">
+              <label>
+                Bộ đề lấy dữ liệu
+                <select id="examSetSelect"></select>
+              </label>
               <label>
                 Số lượng đề mặc định
                 <input id="totalExamCount" type="number" min="1" value="10">
@@ -346,6 +380,96 @@
           <h3>Bản xem trước</h3>
           <div class="preview-wrap">
             <article id="templatePreview" class="exam-paper"></article>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-answer-template" class="hidden">
+        <div class="topbar">
+          <div>
+            <h2>Form đáp án</h2>
+            <p>Chỉnh mẫu in đáp án hàng loạt theo từng bộ đề.</p>
+          </div>
+          <div class="actions">
+            <button id="saveAnswerTemplate">Lưu form đáp án</button>
+            <button class="secondary" id="resetAnswerTemplate">Về form mẫu</button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <form id="answerTemplateForm" class="form-grid">
+            <label>
+              Đơn vị bên trái
+              <textarea id="ansTplLeftHeader"></textarea>
+            </label>
+            <label>
+              Thông tin bên phải
+              <textarea id="ansTplRightHeader"></textarea>
+            </label>
+            <label>
+              Tiêu đề bộ đáp án
+              <input id="ansTplTitle">
+            </label>
+            <label>
+              Cách đánh số câu
+              <select id="ansTplNumberStyle">
+                <option value="Câu">Câu 1:</option>
+                <option value="Question">Question 1:</option>
+                <option value="">1:</option>
+              </select>
+            </label>
+            <label>
+              Khoảng cách giữa 2 đề
+              <input id="ansTplExamGapLines" type="number" min="1" max="10" value="2">
+            </label>
+          </form>
+        </section>
+
+        <section class="panel" style="margin-top:16px">
+          <h3>Định dạng chữ đáp án</h3>
+          <div class="style-grid">
+            <label>
+              Khu vực cần chỉnh
+              <select id="answerStyleTarget">
+                <option value="headerLeft">Đơn vị bên trái</option>
+                <option value="headerRight">Thông tin bên phải</option>
+                <option value="title">Tiêu đề đề</option>
+                <option value="question">Câu và đáp án</option>
+              </select>
+            </label>
+            <label>
+              Font chữ
+              <select id="answerStyleFont">
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Tahoma">Tahoma</option>
+              </select>
+            </label>
+            <label>
+              Cỡ chữ
+              <input id="answerStyleSize" type="number" min="8" max="28" step="1">
+            </label>
+            <label>
+              Căn lề
+              <select id="answerStyleAlign">
+                <option value="left">Trái</option>
+                <option value="center">Giữa</option>
+                <option value="right">Phải</option>
+                <option value="justify">Đều hai bên</option>
+              </select>
+            </label>
+            <label class="check-label">
+              <input id="answerStyleBold" type="checkbox">
+              In đậm
+            </label>
+          </div>
+        </section>
+
+        <section class="panel print-panel" style="margin-top:16px">
+          <h3>Bản xem trước đáp án</h3>
+          <div class="preview-wrap">
+            <article id="answerPreview" class="exam-paper answer-paper"></article>
           </div>
         </section>
       </section>

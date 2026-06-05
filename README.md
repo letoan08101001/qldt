@@ -54,6 +54,13 @@ Tai khoan mac dinh:
 
 Du lieu trial van luu tren trinh duyet theo may nguoi dung.
 
+## Bo de va dap an
+
+- Moi bo de co cau hinh muc cau hoi, so luong de, de da luu va cau hoi da tron rieng.
+- Truong `Dap an` trong form cau hoi duoc dung de in/xuat dap an theo tung cau hoi.
+- Man hinh `Form dap an` cho phep chinh don vi ben trai, thong tin ben phai, tieu de va dinh dang chu.
+- Nut `Xuat dap an` va `In dap an` trong man hinh tao de se tao dap an hang loat theo bo de dang chon. Phan don vi/thong tin tren cung chi hien mot lan, sau do lan luot la dap an cua tung de.
+
 ## Deploy Vercel
 
 Vercel khong chay `server.js` dang long-running server. Du an da co `vercel.json` de route trang ve `index.html` va `api/data.js` de tranh loi `/api/data`.
