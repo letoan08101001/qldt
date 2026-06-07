@@ -6,23 +6,24 @@
   <title>Quản lý đề thi</title>
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/modern-ui.css">
 </head>
 <body>
   <section id="loginScreen" class="login-screen">
-    <div class="login-card">
+    <div class="login-card auth-box">
       <img class="app-logo login-logo" src="assets/logo.svg" alt="Logo Quản lý đề thi">
       <h1>Hệ thống quản lý</h1>
       <p>Đăng nhập để chọn chức năng làm việc.</p>
       <form id="loginForm" class="login-form">
         <label>
           Tên đăng nhập
-          <input id="loginUsername" autocomplete="username">
+          <input id="loginUsername" class="auth-input" autocomplete="username">
         </label>
         <label>
           Mật khẩu
-          <input id="loginPassword" type="password" autocomplete="current-password">
+          <input id="loginPassword" class="auth-input" type="password" autocomplete="current-password">
         </label>
-        <button type="submit">Đăng nhập</button>
+        <button class="auth-btn" type="submit">Đăng nhập</button>
         <div id="loginError" class="login-error"></div>
       </form>
     </div>
@@ -50,14 +51,14 @@
             <svg viewBox="0 0 24 24"><path d="M7 3h9l4 4v17H7z"/><path d="M16 3v5h5"/><path d="M4 7h3v17H4z"/><path d="M10 12h7M10 16h7M10 20h4"/></svg>
           </span>
           <strong>Quản lý đề thi</strong>
-          <small>Ngân hàng câu hỏi, tạo đề, xuất Word và in đề thi.</small>
+          <small>Ngân hàng câu hỏi, tạo đề, xuất Word</small>
         </button>
         <button class="module-card" id="openDiplomaManager" type="button">
           <span class="module-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M4 5h16v10H4z"/><path d="M7 9h10M8 13h8"/><path d="M8 15v6l4-2 4 2v-6"/></svg>
           </span>
           <strong>Quản lý văn bằng</strong>
-          <small>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</small>
+          <small>Thông tin học viên, thiết kế mẫu văn bằng và in hàng loạt.</small>
         </button>
         <button class="module-card" id="openAccountManager" type="button" data-admin-only>
           <span class="module-icon" aria-hidden="true">
@@ -112,7 +113,7 @@
   </div>
 
   <div class="app-shell hidden">
-    <aside class="sidebar">
+    <aside class="sidebar dash-side">
       <div class="brand">
         <div class="brand-title">
           <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý đề thi">
@@ -121,13 +122,13 @@
         <p>Ngân hàng câu hỏi, trộn đề theo mục, xuất Word và in trực tiếp.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng">
-        <button class="secondary" id="backToModules" type="button">← Chọn chức năng</button>
-        <button class="active" data-view="dashboard">▦ Dashboard</button>
-        <button data-view="questions">☰ Câu hỏi</button>
-        <button data-view="generator">⚙ Tạo đề</button>
-        <button data-view="template">✎ Form đề thi</button>
-        <button data-view="answer-template">☑ Form đáp án</button>
-        <button data-view="data">⇅ Dữ liệu</button>
+        <button class="secondary dash-menu-item" id="backToModules" type="button">← Chọn chức năng</button>
+        <button class="active dash-menu-item" data-view="dashboard">▦ Dashboard</button>
+        <button class="dash-menu-item" data-view="questions">☰ Câu hỏi</button>
+        <button class="dash-menu-item" data-view="generator">⚙ Tạo đề</button>
+        <button class="dash-menu-item" data-view="template">✎ Form đề thi</button>
+        <button class="dash-menu-item" data-view="answer-template">☑ Form đáp án</button>
+        <button class="dash-menu-item" data-view="data">⇅ Dữ liệu</button>
       </nav>
       <div class="user-box">
         <div>Đang đăng nhập: <strong id="currentUserName"></strong></div>
@@ -137,18 +138,40 @@
     </aside>
 
     <main class="content">
-      <section id="view-dashboard">
-        <div class="topbar">
+      <section id="view-dashboard" class="premium-dashboard">
+        <div class="topbar dash-top">
           <div>
             <h2>Dashboard</h2>
-            <p>Tổng quan ngân hàng câu hỏi, đề thi và hoạt động gần đây.</p>
+            <p>Tổng quan</p>
           </div>
         </div>
         <div class="stats-grid">
-          <div class="stat-card"><span>Mục câu hỏi</span><strong id="statCategories">0</strong></div>
-          <div class="stat-card"><span>Câu hỏi</span><strong id="statQuestions">0</strong></div>
-          <div class="stat-card"><span>Số đề</span><strong id="statExams">0</strong></div>
-          <div class="stat-card"><span>Tài khoản</span><strong id="statAccounts">0</strong></div>
+          <div class="stat-card mini-kpi"><span>Mục</span><strong id="statCategories">0</strong></div>
+          <div class="stat-card mini-kpi"><span>Câu hỏi</span><strong id="statQuestions">0</strong></div>
+          <div class="stat-card mini-kpi"><span>Số đề</span><strong id="statExams">0</strong></div>
+          <div class="stat-card mini-kpi"><span>Tài khoản</span><strong id="statAccounts">0</strong></div>
+        </div>
+        <div class="premium-insights">
+          <section class="panel chart-card">
+            <h3>Hiệu suất ngân hàng đề</h3>
+            <div class="chart-bars" aria-hidden="true">
+              <i style="height:42%"></i>
+              <i style="height:68%"></i>
+              <i style="height:53%"></i>
+              <i style="height:82%"></i>
+              <i style="height:74%"></i>
+              <i style="height:94%"></i>
+              <i style="height:63%"></i>
+            </div>
+          </section>
+          <section class="panel progress-card">
+            <h3>Trạng thái hệ thống</h3>
+            <div class="progress-list">
+              <div class="progress-item"><strong><span>Dữ liệu</span><span>92%</span></strong><div class="progress-track"><i style="width:92%"></i></div></div>
+              <div class="progress-item"><strong><span>Biểu mẫu</span><span>84%</span></strong><div class="progress-track"><i style="width:84%"></i></div></div>
+              <div class="progress-item"><strong><span>Sẵn sàng in/xuất</span><span>98%</span></strong><div class="progress-track"><i style="width:98%"></i></div></div>
+            </div>
+          </section>
         </div>
         <div class="dashboard-grid">
           <section class="panel">
@@ -247,11 +270,11 @@
         <div class="topbar">
           <div>
             <h2>Tạo đề ngẫu nhiên</h2>
-            <p>Chọn số câu cho từng mục. Mỗi lần bấm tạo đề sẽ trộn câu hỏi mới trong đúng mục đó.</p>
+            <p>Chọn số câu cho từng mục.</p>
           </div>
           <div class="actions">
             <button id="generateExam">Tạo đề</button>
-            <button class="secondary" id="saveGeneratedExam">Lưu đề</button>
+            <button class="secondary" id="saveGeneratedExam">Lưu</button>
             <button class="warning" id="exportWord">Xuất Word</button>
             <button class="warning" id="exportAllWord">Xuất tất cả đề</button>
             <button class="warning" id="exportAllAnswersWord">Xuất đáp án</button>
@@ -435,7 +458,7 @@
         <div class="topbar">
           <div>
             <h2>Form đáp án</h2>
-            <p>Chọn form đề thi trước; phần thông tin đáp án sẽ lấy theo form đề thi đó.</p>
+            <p>Thông tin đáp án sẽ lấy theo form đề thi</p>
           </div>
           <div class="actions" id="answerTemplateActions">
             <button id="saveAnswerTemplate">Lưu form đáp án</button>
@@ -549,7 +572,7 @@
   </div>
 
   <div id="accountShell" class="account-shell hidden">
-    <aside class="sidebar">
+    <aside class="sidebar dash-side">
       <div class="brand">
         <div class="brand-title">
           <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý tài khoản">
@@ -558,7 +581,7 @@
         <p>Tạo tài khoản, phân quyền và cập nhật thông tin cán bộ sử dụng.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng tài khoản">
-        <button class="secondary" id="backToModulesFromAccounts" type="button">← Chọn chức năng</button>
+        <button class="secondary dash-menu-item" id="backToModulesFromAccounts" type="button">← Chọn chức năng</button>
       </nav>
       <div class="user-box">
         <div>Đang đăng nhập: <strong id="accountUserName"></strong></div>
@@ -568,7 +591,7 @@
 
     <main class="content">
       <section id="account-view">
-        <div class="topbar">
+        <div class="topbar dash-top">
           <div>
             <h2>Quản lý tài khoản</h2>
             <p>Tạo tài khoản, phân quyền và lưu thông tin cán bộ sử dụng phần mềm.</p>
@@ -625,7 +648,7 @@
           </section>
           <section class="panel">
             <h3>Danh sách tài khoản</h3>
-            <div id="accountList" class="list"></div>
+            <div id="accountList" class="list data-table"></div>
           </section>
         </div>
       </section>
@@ -633,7 +656,7 @@
   </div>
 
   <div id="diplomaShell" class="diploma-shell hidden">
-    <aside class="sidebar">
+    <aside class="sidebar dash-side">
       <div class="brand">
         <div class="brand-title">
           <img class="app-logo" src="assets/logo.svg" alt="Logo Quản lý văn bằng">
@@ -642,10 +665,10 @@
         <p>Lưu học viên, thiết kế mẫu văn bằng và in hàng loạt.</p>
       </div>
       <nav class="nav" aria-label="Điều hướng văn bằng">
-        <button class="secondary" id="backToModulesFromDiploma" type="button">← Chọn chức năng</button>
-        <button class="active" data-diploma-view="students">▦ Học viên</button>
-        <button data-diploma-view="designer">✎ Mẫu văn bằng</button>
-        <button data-diploma-view="preview">▣ In văn bằng</button>
+        <button class="secondary dash-menu-item" id="backToModulesFromDiploma" type="button">← Chọn chức năng</button>
+        <button class="active dash-menu-item" data-diploma-view="students">▦ Học viên</button>
+        <button class="dash-menu-item" data-diploma-view="designer">✎ Mẫu văn bằng</button>
+        <button class="dash-menu-item" data-diploma-view="preview">▣ In văn bằng</button>
       </nav>
       <div class="user-box">
         <div>Đang đăng nhập: <strong id="diplomaUserName"></strong></div>
@@ -655,7 +678,7 @@
 
     <main class="content">
       <section id="diploma-view-students">
-        <div class="topbar">
+        <div class="topbar dash-top">
           <div>
             <h2>Học viên</h2>
             <p>Lưu thông tin học viên để in văn bằng theo mẫu đã thiết kế.</p>
@@ -687,13 +710,13 @@
           </section>
           <section class="panel">
             <h3>Danh sách học viên</h3>
-            <div id="diplomaStudentList" class="list"></div>
+            <div id="diplomaStudentList" class="list data-table"></div>
           </section>
         </div>
       </section>
 
       <section id="diploma-view-designer" class="hidden">
-        <div class="topbar">
+        <div class="topbar dash-top">
           <div>
             <h2>Mẫu văn bằng</h2>
             <p>Chỉnh khổ giấy, ảnh nền, logo, khung viền và vị trí thông tin trên văn bằng.</p>
@@ -748,7 +771,7 @@
       </section>
 
       <section id="diploma-view-preview" class="hidden">
-        <div class="topbar">
+        <div class="topbar dash-top">
           <div>
             <h2>In văn bằng</h2>
             <p>Xem trước mẫu văn bằng và in toàn bộ học viên.</p>
@@ -772,4 +795,3 @@
   <div class="copyright-footer">Bản quyền bởi Lê Mạnh Toàn · SĐT: 0888288260</div>
 </body>
 </html>
-
