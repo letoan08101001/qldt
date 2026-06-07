@@ -95,6 +95,22 @@
     </div>
   </div>
 
+  <div id="examTemplateNameModal" class="modal-backdrop hidden">
+    <div class="trial-modal form-modal">
+      <h2>Thêm form đề thi mới</h2>
+      <form id="examTemplateNameForm" class="login-form">
+        <label>
+          Tên form đề thi
+          <input id="newExamTemplateName" placeholder="Ví dụ: Form thi thực hành tổng hợp" required>
+        </label>
+        <div class="actions">
+          <button type="submit">Xong</button>
+          <button class="secondary" id="cancelExamTemplateName" type="button">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
@@ -237,16 +253,13 @@
             <button id="generateExam">Tạo đề</button>
             <button class="secondary" id="saveGeneratedExam">Lưu đề</button>
             <button class="warning" id="exportWord">Xuất Word</button>
-            <button class="secondary" id="printExam">In trực tiếp</button>
             <button class="warning" id="exportAllWord">Xuất tất cả đề</button>
-            <button class="secondary" id="printAllExam">In tất cả đề</button>
             <button class="warning" id="exportAllAnswersWord">Xuất đáp án</button>
-            <button class="secondary" id="printAllAnswers">In đáp án</button>
           </div>
         </div>
 
         <div class="generator-layout">
-          <section class="panel">
+          <section class="panel generator-options-panel">
             <h3>Cấu hình lấy câu hỏi</h3>
             <div class="generator-settings">
               <label>
@@ -258,7 +271,7 @@
                 <input id="totalExamCount" type="number" min="1" value="10">
               </label>
               <label>
-                Đang tạo đề số
+                Đang xem đề số
                 <select id="selectedExamNo"></select>
               </label>
             </div>
@@ -267,10 +280,15 @@
             <div class="empty" id="generatorHint" style="margin-top:12px"></div>
           </section>
 
-          <section class="panel print-panel">
+          <section class="panel print-panel generator-preview-panel">
             <h3>Bản xem trước</h3>
             <div class="preview-wrap">
               <article id="examPreview" class="exam-paper"></article>
+            </div>
+            <div class="preview-pager" id="examPreviewPager">
+              <button class="secondary icon" id="prevPreviewPage" type="button" title="Trang trước">‹</button>
+              <span id="previewPageLabel">Trang 1 / 1</span>
+              <button class="secondary icon" id="nextPreviewPage" type="button" title="Trang sau">›</button>
             </div>
           </section>
         </div>
@@ -280,216 +298,234 @@
         <div class="topbar">
           <div>
             <h2>Chỉnh form đề thi</h2>
-            <p>Các thông tin này sẽ hiện trong bản in và file Word.</p>
+            <p>Chọn form trước, sau đó chỉnh nội dung mẫu dùng cho bản in và file Word.</p>
           </div>
-          <div class="actions">
+          <div class="actions" id="templateActions">
             <button id="saveTemplate">Lưu form</button>
             <button class="secondary" id="resetTemplate">Về form mẫu</button>
           </div>
         </div>
 
         <section class="panel">
-          <form id="templateForm" class="form-grid">
-            <label>
-              Đơn vị bên trái
-              <textarea id="tplLeftHeader"></textarea>
-            </label>
-            <label>
-              Hội đồng ở giữa
-              <textarea id="tplCenterHeader"></textarea>
-            </label>
-            <label class="full">
-              Thông tin bên phải
-              <textarea id="tplRightHeader"></textarea>
-            </label>
-            <label>
-              Tiêu đề đề thi
-              <input id="tplTitle">
-            </label>
-            <label>
-              Môn/chủ đề
-              <input id="tplSubject">
-            </label>
-            <label>
-              Thời gian làm bài
-              <input id="tplDuration">
-            </label>
-            <label>
-              Mã đề
-              <input id="tplCode">
-            </label>
-            <label class="full">
-              Dòng thông tin thí sinh
-              <input id="tplStudentLine">
-            </label>
-            <label class="full">
-              Hướng dẫn đầu đề
-              <textarea id="tplInstruction"></textarea>
-            </label>
-            <label>
-              Cách đánh số câu
-              <select id="tplNumberStyle">
-                <option value="Câu">Câu 1.</option>
-                <option value="Question">Question 1.</option>
-                <option value="">1.</option>
-              </select>
-            </label>
-            <label>
-              Khoảng trống trả lời
-              <select id="tplAnswerSpace">
-                <option value="none">Không thêm</option>
-                <option value="short">Ngắn</option>
-                <option value="long">Dài</option>
-              </select>
-            </label>
-            <label>
-              Khoảng cách giữa 2 đề
-              <input id="tplExamGapLines" type="number" min="1" max="10" value="10">
-            </label>
-          </form>
-        </section>
-
-        <section class="panel" style="margin-top:16px">
-          <h3>Định dạng chữ</h3>
-          <div class="style-grid">
-            <label>
-              Khu vực cần chỉnh
-              <select id="styleTarget">
-                <option value="headerLeft">Đầu đề bên trái</option>
-                <option value="headerCenter">Đầu đề ở giữa</option>
-                <option value="headerRight">Đầu đề bên phải</option>
-                <option value="title">Tiêu đề đề thi</option>
-                <option value="subject">Môn thi</option>
-                <option value="duration">Thời gian thi</option>
-                <option value="instruction">Hình thức thi</option>
-                <option value="question">Câu hỏi</option>
-              </select>
-            </label>
-            <label>
-              Font chữ
-              <select id="styleFont">
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Arial">Arial</option>
-                <option value="Calibri">Calibri</option>
-                <option value="Tahoma">Tahoma</option>
-              </select>
-            </label>
-            <label>
-              Cỡ chữ
-              <input id="styleSize" type="number" min="8" max="28" step="1">
-            </label>
-            <label>
-              Căn lề
-              <select id="styleAlign">
-                <option value="left">Trái</option>
-                <option value="center">Giữa</option>
-                <option value="right">Phải</option>
-                <option value="justify">Đều hai bên</option>
-              </select>
-            </label>
-            <label class="check-label">
-              <input id="styleBold" type="checkbox">
-              In đậm
-            </label>
+          <h3>Chọn form đề thi</h3>
+          <div id="examTemplateButtons" class="exam-set-buttons"></div>
+          <div class="actions" style="margin-top:12px">
+            <button id="addExamTemplate" type="button">Thêm form mới</button>
+            <button class="danger" id="deleteExamTemplate" type="button">Xóa form</button>
           </div>
         </section>
 
-        <section class="panel print-panel" style="margin-top:16px">
-          <h3>Bản xem trước</h3>
-          <div class="preview-wrap">
-            <article id="templatePreview" class="exam-paper"></article>
-          </div>
-        </section>
+        <div id="templateEditorPanel" class="hidden">
+          <section class="panel" style="margin-top:16px">
+            <form id="templateForm" class="form-grid">
+              <label>
+                Đơn vị bên trái
+                <textarea id="tplLeftHeader"></textarea>
+              </label>
+              <label>
+                Hội đồng ở giữa
+                <textarea id="tplCenterHeader"></textarea>
+              </label>
+              <label class="full">
+                Thông tin bên phải
+                <textarea id="tplRightHeader"></textarea>
+              </label>
+              <label>
+                Tiêu đề đề thi
+                <input id="tplTitle">
+              </label>
+              <label>
+                Môn/chủ đề
+                <input id="tplSubject">
+              </label>
+              <label>
+                Thời gian làm bài
+                <input id="tplDuration">
+              </label>
+              <label>
+                Mã đề
+                <input id="tplCode">
+              </label>
+              <label class="full">
+                Dòng thông tin thí sinh
+                <input id="tplStudentLine">
+              </label>
+              <label class="full">
+                Hướng dẫn đầu đề
+                <textarea id="tplInstruction"></textarea>
+              </label>
+              <label>
+                Cách đánh số câu
+                <select id="tplNumberStyle">
+                  <option value="Câu">Câu 1.</option>
+                  <option value="Question">Question 1.</option>
+                  <option value="">1.</option>
+                </select>
+              </label>
+              <label>
+                Khoảng trống trả lời
+                <select id="tplAnswerSpace">
+                  <option value="none">Không thêm</option>
+                  <option value="short">Ngắn</option>
+                  <option value="long">Dài</option>
+                </select>
+              </label>
+              <label>
+                Khoảng cách giữa 2 đề
+                <input id="tplExamGapLines" type="number" min="1" max="10" value="10">
+              </label>
+            </form>
+          </section>
+
+          <section class="panel" style="margin-top:16px">
+            <h3>Định dạng chữ</h3>
+            <div class="style-grid">
+              <label>
+                Khu vực cần chỉnh
+                <select id="styleTarget">
+                  <option value="headerLeft">Đầu đề bên trái</option>
+                  <option value="headerCenter">Đầu đề ở giữa</option>
+                  <option value="headerRight">Đầu đề bên phải</option>
+                  <option value="title">Tiêu đề đề thi</option>
+                  <option value="subject">Môn thi</option>
+                  <option value="duration">Thời gian thi</option>
+                  <option value="instruction">Hình thức thi</option>
+                  <option value="question">Câu hỏi</option>
+                </select>
+              </label>
+              <label>
+                Font chữ
+                <select id="styleFont">
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Calibri">Calibri</option>
+                  <option value="Tahoma">Tahoma</option>
+                </select>
+              </label>
+              <label>
+                Cỡ chữ
+                <input id="styleSize" type="number" min="8" max="28" step="1">
+              </label>
+              <label>
+                Căn lề
+                <select id="styleAlign">
+                  <option value="left">Trái</option>
+                  <option value="center">Giữa</option>
+                  <option value="right">Phải</option>
+                  <option value="justify">Đều hai bên</option>
+                </select>
+              </label>
+              <label class="check-label">
+                <input id="styleBold" type="checkbox">
+                In đậm
+              </label>
+            </div>
+          </section>
+
+          <section class="panel print-panel" style="margin-top:16px">
+            <h3>Bản xem trước</h3>
+            <div class="preview-wrap">
+              <article id="templatePreview" class="exam-paper"></article>
+            </div>
+          </section>
+        </div>
       </section>
 
       <section id="view-answer-template" class="hidden">
         <div class="topbar">
           <div>
             <h2>Form đáp án</h2>
-            <p>Chỉnh mẫu in đáp án hàng loạt theo từng bộ đề.</p>
+            <p>Chọn form đề thi trước; phần thông tin đáp án sẽ lấy theo form đề thi đó.</p>
           </div>
-          <div class="actions">
+          <div class="actions" id="answerTemplateActions">
             <button id="saveAnswerTemplate">Lưu form đáp án</button>
             <button class="secondary" id="resetAnswerTemplate">Về form mẫu</button>
           </div>
         </div>
 
         <section class="panel">
-          <form id="answerTemplateForm" class="form-grid">
-            <label>
-              Đơn vị bên trái
-              <textarea id="ansTplLeftHeader"></textarea>
-            </label>
-            <label>
-              Thông tin bên phải
-              <textarea id="ansTplRightHeader"></textarea>
-            </label>
-            <label>
-              Tiêu đề bộ đáp án
-              <input id="ansTplTitle">
-            </label>
-            <label>
-              Cách đánh số câu
-              <select id="ansTplNumberStyle">
-                <option value="Câu">Câu 1:</option>
-                <option value="Question">Question 1:</option>
-                <option value="">1:</option>
-              </select>
-            </label>
-            <label>
-              Khoảng cách giữa 2 đề
-              <input id="ansTplExamGapLines" type="number" min="1" max="10" value="2">
-            </label>
-          </form>
+          <h3>Chọn form đáp án</h3>
+          <div id="answerTemplateButtons" class="exam-set-buttons"></div>
         </section>
 
-        <section class="panel" style="margin-top:16px">
-          <h3>Định dạng chữ đáp án</h3>
-          <div class="style-grid">
-            <label>
-              Khu vực cần chỉnh
-              <select id="answerStyleTarget">
-                <option value="headerLeft">Đơn vị bên trái</option>
-                <option value="headerRight">Thông tin bên phải</option>
-                <option value="title">Tiêu đề đề</option>
-                <option value="question">Câu và đáp án</option>
-              </select>
-            </label>
-            <label>
-              Font chữ
-              <select id="answerStyleFont">
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Arial">Arial</option>
-                <option value="Calibri">Calibri</option>
-                <option value="Tahoma">Tahoma</option>
-              </select>
-            </label>
-            <label>
-              Cỡ chữ
-              <input id="answerStyleSize" type="number" min="8" max="28" step="1">
-            </label>
-            <label>
-              Căn lề
-              <select id="answerStyleAlign">
-                <option value="left">Trái</option>
-                <option value="center">Giữa</option>
-                <option value="right">Phải</option>
-                <option value="justify">Đều hai bên</option>
-              </select>
-            </label>
-            <label class="check-label">
-              <input id="answerStyleBold" type="checkbox">
-              In đậm
-            </label>
-          </div>
-        </section>
+        <div id="answerTemplateEditorPanel" class="hidden">
+          <section class="panel" style="margin-top:16px">
+            <form id="answerTemplateForm" class="form-grid">
+              <label>
+                Đơn vị bên trái
+                <textarea id="ansTplLeftHeader" readonly></textarea>
+              </label>
+              <label>
+                Thông tin bên phải
+                <textarea id="ansTplRightHeader" readonly></textarea>
+              </label>
+              <label>
+                Tiêu đề bộ đáp án
+                <input id="ansTplTitle" readonly>
+              </label>
+              <label>
+                Cách đánh số câu
+                <select id="ansTplNumberStyle">
+                  <option value="Câu">Câu 1:</option>
+                  <option value="Question">Question 1:</option>
+                  <option value="">1:</option>
+                </select>
+              </label>
+              <label>
+                Khoảng cách giữa 2 đề
+                <input id="ansTplExamGapLines" type="number" min="1" max="10" value="2">
+              </label>
+            </form>
+          </section>
 
-        <section class="panel print-panel" style="margin-top:16px">
-          <h3>Bản xem trước đáp án</h3>
-          <div class="preview-wrap">
-            <article id="answerPreview" class="exam-paper answer-paper"></article>
-          </div>
-        </section>
+          <section class="panel" style="margin-top:16px">
+            <h3>Định dạng chữ đáp án</h3>
+            <div class="style-grid">
+              <label>
+                Khu vực cần chỉnh
+                <select id="answerStyleTarget">
+                  <option value="headerLeft">Đơn vị bên trái</option>
+                  <option value="headerRight">Thông tin bên phải</option>
+                  <option value="title">Tiêu đề đề</option>
+                  <option value="question">Câu và đáp án</option>
+                </select>
+              </label>
+              <label>
+                Font chữ
+                <select id="answerStyleFont">
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Calibri">Calibri</option>
+                  <option value="Tahoma">Tahoma</option>
+                </select>
+              </label>
+              <label>
+                Cỡ chữ
+                <input id="answerStyleSize" type="number" min="8" max="28" step="1">
+              </label>
+              <label>
+                Căn lề
+                <select id="answerStyleAlign">
+                  <option value="left">Trái</option>
+                  <option value="center">Giữa</option>
+                  <option value="right">Phải</option>
+                  <option value="justify">Đều hai bên</option>
+                </select>
+              </label>
+              <label class="check-label">
+                <input id="answerStyleBold" type="checkbox">
+                In đậm
+              </label>
+            </div>
+          </section>
+
+          <section class="panel print-panel" style="margin-top:16px">
+            <h3>Bản xem trước đáp án</h3>
+            <div class="preview-wrap">
+              <article id="answerPreview" class="exam-paper answer-paper"></article>
+            </div>
+          </section>
+        </div>
       </section>
 
       <section id="view-data" class="hidden">

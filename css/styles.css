@@ -504,17 +504,30 @@
 
     .generator-layout {
       display: grid;
-      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      grid-template-columns: minmax(520px, 1fr) minmax(250px, 320px);
       gap: 16px;
       align-items: start;
     }
 
     .generator-layout .print-panel {
-      grid-column: 1 / -1;
+      grid-column: 1;
+      grid-row: 1;
     }
 
-    .generator-layout > .panel:not(.print-panel) {
-      grid-column: 1 / -1;
+    .generator-options-panel {
+      grid-column: 2;
+      grid-row: 1;
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 14px;
+      align-self: start;
+    }
+
+    .generator-options-panel h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
     }
 
     .exam-set-buttons {
@@ -602,7 +615,7 @@
 
     .spec-row {
       display: grid;
-      grid-template-columns: minmax(160px, 1fr) 110px 46px;
+      grid-template-columns: minmax(0, 1fr) 76px 40px;
       gap: 9px;
       align-items: end;
       margin-bottom: 10px;
@@ -610,7 +623,7 @@
 
     .generator-settings {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 10px;
       margin-bottom: 14px;
     }
@@ -623,6 +636,22 @@
       border-radius: var(--radius);
       padding: 18px;
       overflow: auto;
+    }
+
+    .preview-pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .preview-pager span {
+      min-width: 110px;
+      text-align: center;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: .92rem;
     }
 
     .exam-paper {
@@ -1305,6 +1334,17 @@
       .exam-head, .answer-head, .exam-info { grid-template-columns: 1fr; }
       .exam-head { margin-bottom: 26px; }
       .spec-row, .generator-settings, .style-grid, .stats-grid, .dashboard-grid, .generator-layout { grid-template-columns: 1fr; }
+      .generator-layout .print-panel,
+      .generator-options-panel {
+        grid-column: 1;
+      }
+      .generator-options-panel {
+        grid-row: 2;
+        position: static;
+        max-height: none;
+        overflow: visible;
+      }
+      .generator-layout .print-panel { grid-row: 1; }
     }
 
     @media (max-width: 640px) {
@@ -1318,6 +1358,7 @@
       .sidebar, .topbar, .panel:not(.print-panel), .copyright-footer { display: none !important; }
       .app-shell, .diploma-shell, .account-shell, .content { display: block; padding: 0; }
       .print-panel { border: 0; box-shadow: none; padding: 0; }
+      .preview-pager { display: none !important; }
       .preview-wrap { border: 0; background: #fff; padding: 0; overflow: visible; }
       .exam-paper { width: 18.3cm; height: 28.05cm; min-height: 28.05cm; box-shadow: none; padding: 0; margin: 0 auto; overflow: hidden; }
       .exam-half { height: 14.025cm; box-sizing: border-box; padding: .25cm 0; overflow: hidden; }

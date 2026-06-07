@@ -4,6 +4,9 @@
     let sessionUserId = null;
     let activeModule = null;
     let questionBankSetSelected = false;
+    let examTemplateSelected = false;
+    let answerTemplateSelected = false;
+    let examPreviewPage = 1;
     const defaultSettings = {
       totalExams: 10,
       selectedExamNo: 1,
@@ -117,7 +120,9 @@
       template: { ...defaultTemplate },
       settings: { ...defaultSettings },
       activeExamSetId: 'default-set',
+      activeExamTemplateId: 'default-template',
       examSets: [],
+      examTemplates: [],
       accounts: structuredClone(defaultAccounts),
       currentExam: [],
       savedExams: {},
@@ -147,6 +152,13 @@
         savedExams: {}
       }
     ];
+    sampleData.examTemplates = [
+      {
+        id: 'default-template',
+        name: 'Form mặc định',
+        template: structuredClone(sampleData.template)
+      }
+    ];
 
     let state = loadState();
 
@@ -160,6 +172,7 @@
       const raw = dataStore.load();
       if (!raw) {
         const fresh = structuredClone(sampleData);
+        applyActiveTemplateToState(fresh);
         applyActiveExamSetToState(fresh);
         return fresh;
       }
@@ -174,7 +187,9 @@
           template,
           settings,
           activeExamSetId: parsed.activeExamSetId || parsed.examSets?.[0]?.id || 'default-set',
+          activeExamTemplateId: parsed.activeExamTemplateId || parsed.examTemplates?.[0]?.id || 'default-template',
           examSets: normalizeExamSets(parsed.examSets, parsed),
+          examTemplates: normalizeExamTemplates(parsed.examTemplates, parsed),
           accounts: normalizeAccounts(parsed.accounts),
           currentExam: parsed.currentExam || [],
           savedExams: normalizeSavedExams(parsed.savedExams),
@@ -183,6 +198,7 @@
           diplomaStudents: normalizeDiplomaStudents(parsed.diplomaStudents),
           diplomaTemplate: normalizeDiplomaTemplate(parsed.diplomaTemplate)
         };
+        applyActiveTemplateToState(loaded);
         applyActiveExamSetToState(loaded);
         return loaded;
       } catch {
@@ -193,6 +209,7 @@
     }
 
     function saveState() {
+      syncActiveTemplateFromState();
       syncActiveExamSetFromState();
       const currentUserId = state.settings.currentUserId;
       state.settings.currentUserId = null;
@@ -217,6 +234,39 @@
         currentExam: Array.isArray(set.currentExam) ? normalizeQuestions(set.currentExam) : [],
         savedExams: normalizeSavedExams(set.savedExams)
       }));
+    }
+
+    function normalizeExamTemplates(examTemplates = [], legacy = {}) {
+      const source = Array.isArray(examTemplates) && examTemplates.length ? examTemplates : [{
+        id: 'default-template',
+        name: 'Form mặc định',
+        template: legacy.template || defaultTemplate
+      }];
+      return source.map((item, index) => ({
+        id: item.id || crypto.randomUUID(),
+        name: item.name || `Form đề thi ${index + 1}`,
+        template: normalizeTemplate(item.template || legacy.template || defaultTemplate)
+      }));
+    }
+
+    function activeExamTemplate(targetState = state) {
+      targetState.examTemplates = normalizeExamTemplates(targetState.examTemplates, targetState);
+      let item = targetState.examTemplates.find((template) => template.id === targetState.activeExamTemplateId);
+      if (!item) {
+        item = targetState.examTemplates[0];
+        targetState.activeExamTemplateId = item.id;
+      }
+      return item;
+    }
+
+    function applyActiveTemplateToState(targetState = state) {
+      const item = activeExamTemplate(targetState);
+      targetState.template = normalizeTemplate(item.template || defaultTemplate);
+    }
+
+    function syncActiveTemplateFromState() {
+      const item = activeExamTemplate();
+      item.template = normalizeTemplate(state.template || defaultTemplate);
     }
 
     function activeExamSet(targetState = state) {
@@ -524,6 +574,8 @@
       renderAccounts();
       renderExamSets();
       renderQuestionExamSetButtons();
+      renderExamTemplateButtons();
+      renderAnswerTemplateButtons();
       renderCategoryOptions();
       if ($('filterCategory')) $('filterCategory').value = preservedFilter;
       if ($('searchQuestion')) $('searchQuestion').value = preservedQuery;
@@ -617,6 +669,32 @@
       $('examSetSelect').innerHTML = state.examSets.map((item) => `<option value="${item.id}" ${item.id === set.id ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('');
     }
 
+    function renderExamTemplateButtons() {
+      if (!$('examTemplateButtons')) return;
+      state.examTemplates = normalizeExamTemplates(state.examTemplates, state);
+      const activeId = activeExamTemplate().id;
+      $('examTemplateButtons').innerHTML = state.examTemplates.map((item) => `
+        <button type="button" class="${item.id === activeId && examTemplateSelected ? '' : 'secondary'}" onclick="openExamTemplate('${item.id}')">
+          ${escapeHtml(item.name)}
+        </button>
+      `).join('');
+      $('templateEditorPanel').classList.toggle('hidden', !examTemplateSelected);
+      $('templateActions').classList.toggle('hidden', !examTemplateSelected);
+    }
+
+    function renderAnswerTemplateButtons() {
+      if (!$('answerTemplateButtons')) return;
+      state.examTemplates = normalizeExamTemplates(state.examTemplates, state);
+      const activeId = activeExamTemplate().id;
+      $('answerTemplateButtons').innerHTML = state.examTemplates.map((item) => `
+        <button type="button" class="${item.id === activeId && answerTemplateSelected ? '' : 'secondary'}" onclick="openAnswerTemplate('${item.id}')">
+          ${escapeHtml(item.name)}
+        </button>
+      `).join('');
+      $('answerTemplateEditorPanel').classList.toggle('hidden', !answerTemplateSelected);
+      $('answerTemplateActions').classList.toggle('hidden', !answerTemplateSelected);
+    }
+
     function renderQuestionExamSetButtons() {
       if (!$('questionExamSetButtons')) return;
       const activeId = activeExamSet().id;
@@ -693,7 +771,7 @@
         `;
       }).join('');
       const total = state.specs.reduce((sum, spec) => sum + Number(spec.count || 0), 0);
-      $('generatorHint').textContent = `Đang tạo đề số ${formatExamNo(state.settings.selectedExamNo)} trong "${activeExamSet().name}". Tổng số câu sẽ lấy: ${total}. Phần mềm lấy ngẫu nhiên từ ngân hàng câu hỏi của bộ đề đang chọn.`;
+      $('generatorHint').textContent = `Mỗi lần bấm Tạo đề sẽ tạo đủ ${state.settings.totalExams} đề trong "${activeExamSet().name}". Đang xem đề số ${formatExamNo(state.settings.selectedExamNo)}. Mỗi đề sẽ lấy: ${total} câu.`;
     }
 
     function syncPreviewCopies() {
@@ -715,6 +793,7 @@
     }
 
     function fillTemplateForm() {
+      state.template = normalizeTemplate(state.template);
       const t = state.template;
       $('tplLeftHeader').value = t.leftHeader;
       $('tplCenterHeader').value = t.centerHeader;
@@ -752,6 +831,7 @@
         },
         templateVersion: 4
       };
+      syncActiveTemplateFromState();
       saveState();
       renderExamPreview();
       renderAnswerPreview();
@@ -781,8 +861,19 @@
       readTemplateForm();
     }
 
+    function syncAnswerTemplateFromExamTemplate() {
+      state.template = normalizeTemplate(state.template);
+      state.answerTemplate = normalizeAnswerTemplate({
+        ...state.answerTemplate,
+        leftHeader: state.template.leftHeader,
+        rightHeader: state.template.rightHeader,
+        title: state.template.title
+      });
+    }
+
     function fillAnswerTemplateForm() {
       if (!$('ansTplLeftHeader')) return;
+      syncAnswerTemplateFromExamTemplate();
       state.answerTemplate = normalizeAnswerTemplate(state.answerTemplate);
       const t = state.answerTemplate;
       $('ansTplLeftHeader').value = t.leftHeader;
@@ -794,11 +885,9 @@
     }
 
     function readAnswerTemplateForm() {
+      syncAnswerTemplateFromExamTemplate();
       state.answerTemplate = normalizeAnswerTemplate({
         ...state.answerTemplate,
-        leftHeader: $('ansTplLeftHeader').value,
-        rightHeader: $('ansTplRightHeader').value,
-        title: $('ansTplTitle').value,
         numberStyle: $('ansTplNumberStyle').value,
         examGapLines: Math.min(10, Math.max(1, Number($('ansTplExamGapLines').value || defaultAnswerTemplate.examGapLines))),
         textStyles: {
@@ -806,6 +895,8 @@
           ...(state.answerTemplate.textStyles || {})
         }
       });
+      syncAnswerTemplateFromExamTemplate();
+      fillAnswerTemplateForm();
       saveState();
       renderAnswerPreview();
     }
@@ -837,24 +928,50 @@
 
     function renderAnswerPreview() {
       if (!$('answerPreview')) return;
+      syncAnswerTemplateFromExamTemplate();
       $('answerPreview').innerHTML = buildAllAnswersHtml(false);
       fitPreviewHeaders();
     }
 
     function renderExamPreview() {
-      const selectedExamNo = state.settings?.selectedExamNo || 1;
-      const firstExamNo = Math.floor((selectedExamNo - 1) / 2) * 2 + 1;
+      examPreviewPage = clampExamPreviewPage(examPreviewPage);
+      const firstExamNo = (examPreviewPage - 1) * 2 + 1;
       const halves = [firstExamNo, firstExamNo + 1].map((examNo) => {
         if (examNo > state.settings.totalExams) return '<div class="exam-half empty-half"></div>';
-        const questions = examNo === selectedExamNo && state.currentExam.length
-          ? state.currentExam
-          : examForPreview(examNo);
+        const questions = examForPreview(examNo);
         return `<div class="exam-half">${buildExamHtml(examNo, buildQuestionsHtml(questions), examWarnings(examNo))}</div>`;
       });
 
       $('examPreview').innerHTML = halves.join('');
+      renderExamPreviewPager();
       syncPreviewCopies();
       fitPreviewHeaders();
+    }
+
+    function examPreviewTotalPages() {
+      return Math.max(1, Math.ceil(Number(state.settings?.totalExams || 1) / 2));
+    }
+
+    function clampExamPreviewPage(page) {
+      return Math.min(examPreviewTotalPages(), Math.max(1, Number(page || 1)));
+    }
+
+    function renderExamPreviewPager() {
+      if (!$('previewPageLabel')) return;
+      const totalPages = examPreviewTotalPages();
+      examPreviewPage = clampExamPreviewPage(examPreviewPage);
+      $('previewPageLabel').textContent = `Trang ${examPreviewPage} / ${totalPages}`;
+      $('prevPreviewPage').disabled = examPreviewPage <= 1;
+      $('nextPreviewPage').disabled = examPreviewPage >= totalPages;
+    }
+
+    function changeExamPreviewPage(delta) {
+      examPreviewPage = clampExamPreviewPage(examPreviewPage + delta);
+      state.settings.selectedExamNo = Math.min(state.settings.totalExams, (examPreviewPage - 1) * 2 + 1);
+      state.currentExam = examForPreview(state.settings.selectedExamNo);
+      renderExamControls();
+      saveState();
+      renderExamPreview();
     }
 
     function examWarnings(examNo) {
@@ -944,22 +1061,37 @@
     }
 
     function generateExam() {
-      const selectedExamNo = state.settings.selectedExamNo;
-      const selected = buildExamQuestions(selectedExamNo);
-      state.currentExam = selected.map((q) => ({ ...q, categoryName: categoryName(q.categoryId) }));
-      setSavedExam(selectedExamNo, state.currentExam);
+      generateAllExams();
       saveState();
       renderExamPreview();
+      renderAnswerPreview();
+      alert(`Đã tạo ${state.settings.totalExams} đề.`);
     }
 
     function saveGeneratedExam() {
       const selectedExamNo = state.settings.selectedExamNo;
-      if (!state.currentExam.length) return alert('Chưa có đề để lưu. Hãy bấm Tạo đề trước.');
-      setSavedExam(selectedExamNo, state.currentExam);
+      const hasAnyExam = Object.keys(state.savedExams || {}).some((examNo) => {
+        const number = Number(examNo);
+        return number >= 1 && number <= state.settings.totalExams && getSavedExam(number).length;
+      });
+      if (!hasAnyExam) generateAllExams();
+      else {
+        for (let examNo = 1; examNo <= state.settings.totalExams; examNo++) {
+          if (!getSavedExam(examNo).length) setSavedExam(examNo, buildExamQuestions(examNo));
+        }
+        state.currentExam = examForPreview(selectedExamNo);
+      }
       saveState();
       renderExamPreview();
       renderAnswerPreview();
-      alert(`Đã lưu đề số ${formatExamNo(selectedExamNo)}.`);
+      alert(`Đã lưu ${state.settings.totalExams} đề.`);
+    }
+
+    function generateAllExams() {
+      for (let examNo = 1; examNo <= state.settings.totalExams; examNo++) {
+        setSavedExam(examNo, buildExamQuestions(examNo));
+      }
+      state.currentExam = examForPreview(state.settings.selectedExamNo);
     }
 
     function buildExamQuestions(examNo) {
@@ -1066,6 +1198,7 @@
     }
 
     function buildAllAnswersHtml(ensureQuestions = true) {
+      syncAnswerTemplateFromExamTemplate();
       state.answerTemplate = normalizeAnswerTemplate(state.answerTemplate);
       const parts = [buildAnswerHeaderHtml()];
       for (let index = 0; index < state.settings.totalExams; index++) {
@@ -1078,6 +1211,7 @@
     }
 
     function buildAllAnswersWordHtml() {
+      syncAnswerTemplateFromExamTemplate();
       const t = state.answerTemplate;
       const header = `
         <table class="word-header-table">
@@ -1531,6 +1665,8 @@
 
     function switchView(view) {
       if (view === 'questions') questionBankSetSelected = false;
+      if (view === 'template') examTemplateSelected = false;
+      if (view === 'answer-template') answerTemplateSelected = false;
       const current = document.querySelector('.app-shell main > section:not(.hidden)');
       if (current) current.classList.add('view-leaving');
       animateContentSwitch();
@@ -1539,13 +1675,17 @@
       $(`view-${view}`).classList.remove('hidden');
       $(`view-${view}`).classList.remove('view-leaving');
       renderQuestionExamSetButtons();
+      renderExamTemplateButtons();
+      renderAnswerTemplateButtons();
       renderExamPreview();
+      renderAnswerPreview();
     }
 
     function updateTotalExams(value) {
       const totalExams = Math.max(1, Number(value || 1));
       state.settings.totalExams = totalExams;
       state.settings.selectedExamNo = Math.min(totalExams, Math.max(1, Number(state.settings.selectedExamNo || 1)));
+      examPreviewPage = clampExamPreviewPage(examPreviewPage);
       state.questions = normalizeQuestions(state.questions);
       Object.keys(state.savedExams || {}).forEach((examNo) => {
         if (Number(examNo) > totalExams) delete state.savedExams[examNo];
@@ -1557,6 +1697,7 @@
 
     function updateSelectedExamNo(value) {
       state.settings.selectedExamNo = Math.min(state.settings.totalExams, Math.max(1, Number(value || 1)));
+      examPreviewPage = clampExamPreviewPage(Math.ceil(state.settings.selectedExamNo / 2));
       state.currentExam = examForPreview(state.settings.selectedExamNo);
       renderExamControls();
       renderSpecs();
@@ -1582,6 +1723,75 @@
       switchExamSet(id);
       renderQuestionExamSetButtons();
     };
+
+    function switchExamTemplate(id) {
+      syncActiveTemplateFromState();
+      state.activeExamTemplateId = id;
+      applyActiveTemplateToState();
+      syncAnswerTemplateFromExamTemplate();
+      fillTemplateForm();
+      renderExamTemplateButtons();
+      renderAnswerTemplateButtons();
+      renderExamPreview();
+      renderAnswerPreview();
+      saveState();
+    }
+
+    window.openExamTemplate = (id) => {
+      examTemplateSelected = true;
+      switchExamTemplate(id);
+      renderExamTemplateButtons();
+    };
+
+    window.openAnswerTemplate = (id) => {
+      answerTemplateSelected = true;
+      switchExamTemplate(id);
+      fillAnswerTemplateForm();
+      renderAnswerTemplateButtons();
+    };
+
+    function addExamTemplate() {
+      openExamTemplateNameModal();
+    }
+
+    function finishAddExamTemplate(name) {
+      syncActiveTemplateFromState();
+      const number = (state.examTemplates?.length || 0) + 1;
+      const item = {
+        id: crypto.randomUUID(),
+        name: String(name || '').trim() || `Form đề thi ${number}`,
+        template: structuredClone(defaultTemplate)
+      };
+      state.examTemplates.push(item);
+      state.activeExamTemplateId = item.id;
+      examTemplateSelected = true;
+      applyActiveTemplateToState();
+      renderAll();
+      renderExamTemplateButtons();
+    }
+
+    function openExamTemplateNameModal() {
+      $('newExamTemplateName').value = '';
+      $('examTemplateNameModal').classList.remove('hidden');
+      setTimeout(() => $('newExamTemplateName').focus(), 0);
+    }
+
+    function closeExamTemplateNameModal() {
+      $('examTemplateNameModal').classList.add('hidden');
+      $('newExamTemplateName').value = '';
+    }
+
+    function deleteExamTemplate() {
+      if (!examTemplateSelected) return alert('Hãy chọn form đề thi cần xóa trước.');
+      if (state.examTemplates.length <= 1) return alert('Phải giữ lại ít nhất một form đề thi.');
+      const item = activeExamTemplate();
+      if (!confirm(`Xóa "${item.name}"?`)) return;
+      state.examTemplates = state.examTemplates.filter((template) => template.id !== item.id);
+      state.activeExamTemplateId = state.examTemplates[0].id;
+      examTemplateSelected = false;
+      applyActiveTemplateToState();
+      renderAll();
+    }
 
     function addExamSet() {
       syncActiveExamSetFromState();
@@ -1819,6 +2029,8 @@
     $('examSetSelect').addEventListener('change', (event) => switchExamSet(event.target.value));
     $('addQuestionExamSet').addEventListener('click', addQuestionExamSet);
     $('deleteQuestionExamSet').addEventListener('click', deleteQuestionExamSet);
+    $('addExamTemplate').addEventListener('click', addExamTemplate);
+    $('deleteExamTemplate').addEventListener('click', deleteExamTemplate);
     $('examSetNameForm').addEventListener('submit', (event) => {
       event.preventDefault();
       const name = $('newExamSetName').value.trim();
@@ -1827,6 +2039,14 @@
       finishAddQuestionExamSet(name);
     });
     $('cancelExamSetName').addEventListener('click', closeExamSetNameModal);
+    $('examTemplateNameForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = $('newExamTemplateName').value.trim();
+      if (!name) return;
+      closeExamTemplateNameModal();
+      finishAddExamTemplate(name);
+    });
+    $('cancelExamTemplateName').addEventListener('click', closeExamTemplateNameModal);
     $('totalExamCount').addEventListener('change', (event) => updateTotalExams(event.target.value));
     $('selectedExamNo').addEventListener('change', (event) => updateSelectedExamNo(event.target.value));
 
@@ -1851,22 +2071,23 @@
 
     $('generateExam').addEventListener('click', generateExam);
     $('saveGeneratedExam').addEventListener('click', saveGeneratedExam);
+    $('prevPreviewPage').addEventListener('click', () => changeExamPreviewPage(-1));
+    $('nextPreviewPage').addEventListener('click', () => changeExamPreviewPage(1));
     $('exportWord').addEventListener('click', exportWord);
     $('exportAllWord').addEventListener('click', exportAllWord);
     $('exportAllAnswersWord').addEventListener('click', exportAllAnswersWord);
-    $('printExam').addEventListener('click', () => {
-      renderExamPreview();
-      window.print();
+    ['tplLeftHeader', 'tplCenterHeader', 'tplRightHeader', 'tplTitle', 'tplSubject', 'tplDuration', 'tplCode', 'tplStudentLine', 'tplInstruction', 'tplNumberStyle', 'tplAnswerSpace', 'tplExamGapLines'].forEach((id) => {
+      $(id).addEventListener('input', readTemplateForm);
+      $(id).addEventListener('change', readTemplateForm);
     });
-    $('printAllExam').addEventListener('click', printAllExams);
-    $('printAllAnswers').addEventListener('click', printAllAnswers);
     $('saveTemplate').addEventListener('click', () => {
       readTemplateForm();
       alert('Đã lưu form đề thi.');
     });
     $('resetTemplate').addEventListener('click', () => {
       if (!requireAdmin()) return;
-      state.template = { ...defaultTemplate };
+      state.template = structuredClone(defaultTemplate);
+      syncActiveTemplateFromState();
       renderAll();
     });
     $('saveAnswerTemplate').addEventListener('click', () => {
@@ -1876,6 +2097,8 @@
     $('resetAnswerTemplate').addEventListener('click', () => {
       if (!requireAdmin()) return;
       state.answerTemplate = structuredClone(defaultAnswerTemplate);
+      syncAnswerTemplateFromExamTemplate();
+      fillAnswerTemplateForm();
       renderAll();
     });
 
@@ -1924,7 +2147,9 @@
             template: normalizeTemplate(imported.template),
             settings: normalizeSettings(imported.settings),
             activeExamSetId: imported.activeExamSetId || imported.examSets?.[0]?.id || 'default-set',
+            activeExamTemplateId: imported.activeExamTemplateId || imported.examTemplates?.[0]?.id || 'default-template',
             examSets: normalizeExamSets(imported.examSets, imported),
+            examTemplates: normalizeExamTemplates(imported.examTemplates, imported),
             accounts: normalizeAccounts(imported.accounts),
             currentExam: imported.currentExam || [],
             savedExams: normalizeSavedExams(imported.savedExams),
@@ -1933,6 +2158,7 @@
             diplomaStudents: normalizeDiplomaStudents(imported.diplomaStudents),
             diplomaTemplate: normalizeDiplomaTemplate(imported.diplomaTemplate)
           };
+          applyActiveTemplateToState();
           applyActiveExamSetToState();
           renderAll();
           alert('Đã khôi phục dữ liệu.');
@@ -1956,7 +2182,7 @@
       $(id).addEventListener('input', readStyleControls);
       $(id).addEventListener('change', readStyleControls);
     });
-    ['ansTplLeftHeader', 'ansTplRightHeader', 'ansTplTitle', 'ansTplNumberStyle', 'ansTplExamGapLines'].forEach((id) => {
+    ['ansTplNumberStyle', 'ansTplExamGapLines'].forEach((id) => {
       $(id).addEventListener('input', readAnswerTemplateForm);
       $(id).addEventListener('change', readAnswerTemplateForm);
     });

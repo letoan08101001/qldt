@@ -3,6 +3,14 @@
   "questions": [],
   "specs": [],
   "template": {},
+  "activeExamTemplateId": "default-template",
+  "examTemplates": [
+    {
+      "id": "default-template",
+      "name": "Form mac dinh",
+      "template": {}
+    }
+  ],
   "settings": {
     "totalExams": 10,
     "selectedExamNo": 1
