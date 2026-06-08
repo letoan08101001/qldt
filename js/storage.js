@@ -6,13 +6,13 @@ window.ExamStorage = (() => {
     if (warned) return;
     warned = true;
     setTimeout(() => {
-      alert(`${message}\n\nDữ liệu chung chỉ hoạt động khi chạy qua server/API.`);
+      alert(`${message}\n\nDu lieu chung chi hoat dong khi chay qua server/API dong.`);
     }, 0);
   }
 
   function request(method, path, body) {
     if (!serverMode) {
-      throw new Error('Ứng dụng đang mở trực tiếp bằng file, không có server dữ liệu chung.');
+      throw new Error('Ung dung dang mo truc tiep bang file, khong co server/API du lieu chung.');
     }
     const xhr = new XMLHttpRequest();
     xhr.open(method, path, false);

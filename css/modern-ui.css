@@ -104,6 +104,11 @@ textarea::placeholder {
   color: #64748b;
 }
 
+select option {
+  color: #111827;
+  background: #fff;
+}
+
 label {
   color: #cbd5e1;
 }

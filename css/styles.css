@@ -124,6 +124,11 @@
       background: #fff;
     }
 
+    select option {
+      color: #111827;
+      background: #fff;
+    }
+
     textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
     label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
 
@@ -746,39 +751,28 @@
       max-width: 100%;
       margin: 0 auto;
       background: #fff;
-      border: var(--border-width, 4px) solid var(--border-color, #0f7a66);
       box-shadow: 0 8px 25px rgba(0,0,0,.12);
       overflow: hidden;
       color: #111;
     }
 
-    .diploma-bg {
+    .diploma-pdf-bg {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      opacity: .9;
+      border: 0;
       pointer-events: none;
     }
 
-    .diploma-logo {
+    .diploma-pdf-empty {
       position: absolute;
-      left: 50%;
-      top: 8%;
-      width: 10%;
-      transform: translate(-50%, -50%);
-      object-fit: contain;
-      pointer-events: none;
-    }
-
-    .diploma-student-photo {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      aspect-ratio: 3 / 4;
-      object-fit: cover;
-      border: 1px solid rgba(0,0,0,.35);
-      background: #fff;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      background: repeating-linear-gradient(135deg, #fff, #fff 16px, #f1f5f9 16px, #f1f5f9 32px);
+      font-weight: 700;
     }
 
     .diploma-field {
@@ -788,6 +782,49 @@
       text-align: center;
       line-height: 1.2;
       overflow-wrap: anywhere;
+    }
+
+    .diploma-field[data-diploma-field] {
+      cursor: move;
+      user-select: none;
+      outline: 1px dashed rgba(15, 118, 110, .45);
+      outline-offset: 3px;
+    }
+
+    .diploma-export-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      cursor: pointer;
+    }
+
+    .student-extra-fields {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(248, 251, 249, .72);
+    }
+
+    .student-extra-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .student-extra-row {
+      display: grid;
+      grid-template-columns: minmax(120px, .85fr) minmax(160px, 1.15fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .empty.compact {
+      padding: 8px 0;
+      min-height: 0;
+      border: 0;
+      background: transparent;
     }
 
     .diploma-print-page {
@@ -898,6 +935,15 @@
 
     .check-label input {
       width: auto;
+    }
+
+    .hint {
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      background: #f8fbf9;
+      font-weight: 600;
     }
 
     .login-screen {

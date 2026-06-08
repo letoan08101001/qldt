@@ -1,9 +1,9 @@
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
+const dataHandler = require('./api/data');
 
 const rootDir = __dirname;
-const dataFile = path.join(rootDir, 'app-data.json');
 const port = Number(process.env.PORT || 3000);
 
 const mimeTypes = {
@@ -19,28 +19,9 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
-function ensureDataFile() {
-  if (!fs.existsSync(dataFile)) fs.writeFileSync(dataFile, 'null\n', 'utf8');
-}
-
 function send(res, status, body, contentType = 'text/plain; charset=utf-8') {
   res.writeHead(status, { 'Content-Type': contentType });
   res.end(body);
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk;
-      if (body.length > 25 * 1024 * 1024) {
-        reject(new Error('Request body is too large.'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => resolve(body));
-    req.on('error', reject);
-  });
 }
 
 function safeStaticPath(urlPath) {
@@ -50,43 +31,23 @@ function safeStaticPath(urlPath) {
   return filePath.startsWith(rootDir) ? filePath : null;
 }
 
-async function handleApi(req, res) {
-  ensureDataFile();
-
-  if (req.url !== '/api/data') {
-    send(res, 404, JSON.stringify({ error: 'API endpoint not found.' }), 'application/json; charset=utf-8');
-    return;
-  }
-
-  if (req.method === 'GET') {
-    send(res, 200, fs.readFileSync(dataFile, 'utf8'), 'application/json; charset=utf-8');
-    return;
-  }
-
-  if (req.method === 'PUT') {
-    try {
-      const body = await readBody(req);
-      const parsed = JSON.parse(body);
-      fs.writeFileSync(dataFile, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
-      send(res, 200, JSON.stringify({ ok: true }), 'application/json; charset=utf-8');
-    } catch (error) {
-      send(res, 400, JSON.stringify({ error: error.message }), 'application/json; charset=utf-8');
-    }
-    return;
-  }
-
-  if (req.method === 'DELETE') {
-    fs.writeFileSync(dataFile, 'null\n', 'utf8');
-    send(res, 200, JSON.stringify({ ok: true }), 'application/json; charset=utf-8');
-    return;
-  }
-
-  send(res, 405, JSON.stringify({ error: 'Method not allowed.' }), 'application/json; charset=utf-8');
+function withVercelResponse(res) {
+  res.status = (statusCode) => ({
+    send: (body) => send(res, statusCode, body, res.getHeader('Content-Type') || 'application/json; charset=utf-8')
+  });
+  return res;
 }
 
 const server = http.createServer(async (req, res) => {
-  if (req.url.startsWith('/api/')) {
-    await handleApi(req, res);
+  const pathOnly = req.url.split('?')[0];
+
+  if (pathOnly === '/api/data') {
+    await dataHandler(req, withVercelResponse(res));
+    return;
+  }
+
+  if (pathOnly.startsWith('/api/')) {
+    send(res, 404, JSON.stringify({ error: 'API endpoint not found.' }), 'application/json; charset=utf-8');
     return;
   }
 
@@ -107,6 +68,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  ensureDataFile();
   console.log(`Dynamic web server running at http://localhost:${port}`);
+  console.log('Data API uses MongoDB. Set MONGODB_URI before starting this server.');
 });
