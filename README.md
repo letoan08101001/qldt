@@ -1,12 +1,3 @@
-# Quan ly de thi va van bang
-
-Ung dung chay theo mo hinh web dong:
-
-- Giao dien: `index.html`, `css/`, `js/`, `assets/`.
-- API serverless Vercel: `api/data.js`.
-- Du lieu chung: MongoDB qua bien moi truong `MONGODB_URI`.
-
-Khong con luu du lieu bang `app-data.json` hay `localStorage`.
 
 ## Deploy len Vercel
 
