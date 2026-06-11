@@ -1,6 +1,4 @@
 ﻿const dataStore = window.ExamStorage;
-    const trialDurationMs = 5 * 24 * 60 * 60 * 1000;
-    let trialTimer = null;
     let sessionUserId = null;
     let activeModule = null;
     let questionBankSetSelected = false;
@@ -124,7 +122,6 @@
       accounts: structuredClone(defaultAccounts),
       currentExam: [],
       savedExams: {},
-      trial: null,
       answerTemplate: structuredClone(defaultAnswerTemplate),
       diplomaStudents: [],
       diplomaCourses: [{ id: 'default-diploma-course', name: 'Khóa mặc định' }],
@@ -195,7 +192,6 @@
           accounts: normalizeAccounts(parsed.accounts),
           currentExam: parsed.currentExam || [],
           savedExams: normalizeSavedExams(parsed.savedExams),
-          trial: normalizeTrial(parsed.trial),
           answerTemplate: normalizeAnswerTemplate(parsed.answerTemplate),
           diplomaCourses: normalizeDiplomaCourses(parsed.diplomaCourses),
           activeDiplomaCourseId: parsed.activeDiplomaCourseId || parsed.diplomaCourses?.[0]?.id || 'default-diploma-course',
@@ -316,14 +312,6 @@
       }));
     }
 
-    function normalizeTrial(trial = null) {
-      if (!trial) return null;
-      const start = Number(trial.start || 0);
-      const end = Number(trial.end || 0);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0 || end <= 0) return null;
-      return { start, end };
-    }
-
     function currentUser() {
       return state.accounts.find((account) => account.id === sessionUserId) || null;
     }
@@ -336,56 +324,6 @@
       if (isAdmin()) return true;
       alert('Bạn cần quyền quản trị để thực hiện thao tác này.');
       return false;
-    }
-
-    function getTrialEndTime() {
-      state.trial = normalizeTrial(state.trial);
-      if (state.trial?.end) return state.trial.end;
-      const start = Date.now();
-      const end = start + trialDurationMs;
-      state.trial = { start, end };
-      saveState();
-      return end;
-    }
-
-    function formatCountdown(ms) {
-      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-      const days = Math.floor(totalSeconds / 86400);
-      const hours = Math.floor((totalSeconds % 86400) / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
-    }
-
-    function setTrialExpired() {
-      $('trialPopup').classList.remove('hidden');
-      document.querySelector('.trial-modal').classList.add('expired');
-      $('trialTitle').textContent = 'Trial expired';
-      $('trialMessage').textContent = 'Your trial period has ended. Please pay $99 to continue using our service.';
-      $('trialCountdown').textContent = 'Expired';
-      $('trialOkBtn').classList.add('hidden');
-      $('loginScreen').classList.add('hidden');
-      document.querySelector('.app-shell').classList.add('hidden');
-      $('diplomaShell').classList.add('hidden');
-      $('accountShell').classList.add('hidden');
-    }
-
-    function updateTrialPopup() {
-      const remaining = getTrialEndTime() - Date.now();
-      if (remaining <= 0) {
-        if (trialTimer) clearInterval(trialTimer);
-        setTrialExpired();
-        return;
-      }
-      document.querySelector('.trial-modal').classList.remove('expired');
-      $('trialTitle').textContent = 'Free trial notice';
-      $('trialMessage').textContent = 'Only 5 days left for the free trial, pay $99 now to unlock permanently.';
-      $('trialCountdown').textContent = `Time remaining: ${formatCountdown(remaining)}`;
-    }
-
-    function initTrial() {
-      updateTrialPopup();
-      trialTimer = setInterval(updateTrialPopup, 1000);
     }
 
     function normalizeTemplate(template = {}) {
@@ -2233,10 +2171,6 @@
 
     $('loginForm').addEventListener('submit', (event) => {
       event.preventDefault();
-      if (getTrialEndTime() <= Date.now()) {
-        setTrialExpired();
-        return;
-      }
       const username = $('loginUsername').value.trim();
       const password = $('loginPassword').value;
       const account = state.accounts.find((item) => item.username === username && item.password === password);
@@ -2248,14 +2182,6 @@
       sessionUserId = account.id;
       activeModule = null;
       renderAll();
-    });
-
-    $('trialOkBtn').addEventListener('click', () => {
-      if (getTrialEndTime() <= Date.now()) {
-        setTrialExpired();
-        return;
-      }
-      $('trialPopup').classList.add('hidden');
     });
 
     $('logoutBtn').addEventListener('click', () => {
@@ -2540,7 +2466,6 @@
             accounts: normalizeAccounts(imported.accounts),
             currentExam: imported.currentExam || [],
             savedExams: normalizeSavedExams(imported.savedExams),
-            trial: normalizeTrial(imported.trial),
             answerTemplate: normalizeAnswerTemplate(imported.answerTemplate),
             diplomaCourses: normalizeDiplomaCourses(imported.diplomaCourses),
             activeDiplomaCourseId: imported.activeDiplomaCourseId || imported.diplomaCourses?.[0]?.id || 'default-diploma-course',
@@ -2604,7 +2529,6 @@
     }
 
     initButtonEffects();
-    initTrial();
     renderAll();
 
 

@@ -121,7 +121,7 @@ label {
 }
 
 .login-card.auth-box,
-.trial-modal,
+.dialog-modal,
 .module-head,
 .module-card,
 .panel,
@@ -500,19 +500,13 @@ label {
   background: rgba(2, 6, 23, 0.68);
 }
 
-.trial-modal {
+.dialog-modal {
   color: #f8fafc;
   background: rgba(15, 23, 42, 0.82);
 }
 
-.trial-modal h2 {
+.dialog-modal h2 {
   color: #f8fafc;
-}
-
-.trial-countdown {
-  color: #dbeafe;
-  border-color: rgba(56, 189, 248, 0.20);
-  background: rgba(56, 189, 248, 0.10);
 }
 
 .copyright-footer {

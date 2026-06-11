@@ -996,7 +996,7 @@
       animation: fadeIn .22s var(--ease);
     }
 
-    .trial-modal {
+    .dialog-modal {
       width: min(100%, 420px);
       background: rgba(255,255,255,.96);
       border: 1px solid rgba(255,255,255,.8);
@@ -1007,34 +1007,16 @@
       animation: riseIn .28s var(--ease);
     }
 
-    .trial-modal h2 {
+    .dialog-modal h2 {
       margin: 0 0 10px;
       font-size: 22px;
       color: #14231f;
     }
 
-    .trial-modal p {
+    .dialog-modal p {
       margin: 0 0 18px;
       color: var(--muted);
       line-height: 1.5;
-    }
-
-    .trial-countdown {
-      margin: 0 0 18px;
-      padding: 12px;
-      border: 1px solid rgba(15, 122, 102, .16);
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(232,241,238,.95), rgba(255,255,255,.92));
-      color: #0e5d50;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0;
-    }
-
-    .trial-modal.expired .trial-countdown {
-      border-color: rgba(168, 54, 54, .2);
-      background: rgba(168, 54, 54, .08);
-      color: var(--danger);
     }
 
     .form-modal {

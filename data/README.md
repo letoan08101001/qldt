@@ -71,8 +71,6 @@ Tai khoan mac dinh:
 - `PUT /api/data`: ghi toan bo du lieu.
 - `DELETE /api/data`: xoa du lieu tren server va quay ve du lieu mau khi tai lai ung dung.
 
-Du lieu trial van luu tren trinh duyet theo may nguoi dung.
-
 ## Bo de va dap an
 
 - Moi bo de co cau hinh muc cau hoi, so luong de, de da luu va cau hoi da tron rieng.
