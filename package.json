@@ -4,12 +4,17 @@
   "private": true,
   "description": "Ung dung quan ly de thi va van bang chay dong voi Node.js.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:analytics": "esbuild js/speed-insights-init.js --bundle --format=iife --outfile=js/speed-insights.bundle.js"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "mongodb": "^6.12.0"
   },
   "engines": {
     "node": "20.x"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
   }
 }
